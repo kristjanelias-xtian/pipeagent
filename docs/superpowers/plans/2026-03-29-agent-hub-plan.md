@@ -2141,7 +2141,7 @@ Step-by-step guide covering:
 4. **Get API Keys** — Anthropic (Claude), Tavily (optional)
 5. **Configure Environment** — Copy .env.example, fill values
 6. **Run Locally** — pnpm install && pnpm dev
-7. **Deploy** — Railway (server) + Cloudflare Pages (web)
+7. **Deploy** — Railway (serves both API and SPA from one container)
 8. **Connect Your Pipedrive** — Open hub, click Connect, authorize
 
 Keep it concise, practical, and copy-pasteable.

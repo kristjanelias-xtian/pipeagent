@@ -205,7 +205,7 @@ A `docs/setup-guide.md` file included in the repo that walks any Pipedrive user 
 
 ### 4. Deploy or Run Locally
 - Local: `pnpm install && pnpm dev`
-- Deploy: Railway (server) + Cloudflare Pages (web) with env vars configured
+- Deploy: Railway (serves both API and SPA from one container) with env vars configured
 
 ### 5. Connect Your Pipedrive
 - Open the hub URL

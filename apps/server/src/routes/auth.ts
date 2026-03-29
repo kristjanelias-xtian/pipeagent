@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { getAuthorizationUrl, exchangeCodeForToken } from '../pipedrive/oauth.js';
 import { upsertConnection, getConnection } from '../lib/connections.js';
 import { PipedriveClient } from '../pipedrive/client.js';
+import { createSessionToken } from '../middleware/auth.js';
 
 const auth = new Hono();
 
@@ -88,7 +89,13 @@ auth.get('/callback', async (c) => {
       console.warn('WEBHOOK_URL not set, skipping webhook registration');
     }
 
-    return c.redirect(`${frontendUrl}?connection_id=${connection.id}`);
+    const token = await createSessionToken({
+      connectionId: connection.id,
+      pipedriveUserId: pdUserId,
+      companyId: pdCompanyId,
+    });
+
+    return c.redirect(`${frontendUrl}?token=${token}`);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return c.json({ error: message }, 500);
@@ -96,10 +103,10 @@ auth.get('/callback', async (c) => {
 });
 
 auth.get('/me', async (c) => {
-  const connectionId = c.req.header('X-Connection-Id');
+  const connectionId = c.get('connectionId');
 
   if (!connectionId) {
-    return c.json({ error: 'Missing X-Connection-Id header' }, 400);
+    return c.json({ error: 'Unauthorized' }, 401);
   }
 
   const connection = await getConnection(connectionId);

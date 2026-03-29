@@ -15,7 +15,7 @@ export function HubShell({ user }: HubShellProps) {
       <TopBar user={user} />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar collapsed={collapsed} />
-        <main className="flex-1 overflow-auto">
+        <main className={`flex-1 overflow-auto ${collapsed ? 'bg-[#0f1420] text-gray-100' : ''}`}>
           <Outlet />
         </main>
       </div>

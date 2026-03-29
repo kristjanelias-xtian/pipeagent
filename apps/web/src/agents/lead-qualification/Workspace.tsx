@@ -31,7 +31,7 @@ export function LeadQualificationWorkspace() {
 
   const handleRunAgent = async (leadId: string) => {
     try {
-      await apiFetch('/agent/run', {
+      await apiFetch('/chat/run', {
         method: 'POST',
         body: JSON.stringify({ leadId }),
       });

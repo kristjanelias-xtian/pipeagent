@@ -19,7 +19,7 @@ export function DealCoachWorkspace() {
         onSelectDeal={setSelectedDealId}
         loading={dealsLoading}
       />
-      <div className="flex-1 overflow-auto p-6 bg-[#f5f6f7]">
+      <div className="flex-1 overflow-auto p-6">
         {selectedDeal ? (
           <>
             <DealAnalysis

@@ -53,12 +53,12 @@ export async function fetchDealContext(
   // Fetch hub_config and agent_config from Supabase
   const [hubConfigResult, agentConfigResult] = await Promise.all([
     supabase
-      .from('hub_configs')
+      .from('hub_config')
       .select('global_context')
       .eq('connection_id', connectionId)
       .single(),
     supabase
-      .from('agent_configs')
+      .from('agent_config')
       .select('local_context')
       .eq('connection_id', connectionId)
       .eq('agent_id', AGENT_ID)

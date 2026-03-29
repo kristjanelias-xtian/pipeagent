@@ -23,8 +23,8 @@ export function useDealAnalysis(dealId: number | null) {
         const res = await apiFetch(`/deals/${dealId}/analysis`);
         if (res.ok) {
           const data = await res.json();
-          if (data.analysis) {
-            setAnalysis(data.analysis);
+          if (data && data.health_score != null) {
+            setAnalysis(data);
             setLoading(false);
             return;
           }

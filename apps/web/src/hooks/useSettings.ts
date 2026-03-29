@@ -11,7 +11,8 @@ export function useSettings(connectionId: string | null) {
     if (!connectionId) return;
     setLoading(true);
     try {
-      const data = await apiFetch('/settings');
+      const res = await apiFetch('/settings');
+      const data = await res.json();
       setSettings({
         business_description: data.business_description,
         value_proposition: data.value_proposition,
@@ -36,7 +37,7 @@ export function useSettings(connectionId: string | null) {
       await apiFetch('/settings', {
         method: 'PUT',
         body: JSON.stringify(updated),
-      });
+      } as RequestInit);
       setSettings(updated);
     } catch (err) {
       console.error('Failed to save settings:', err);

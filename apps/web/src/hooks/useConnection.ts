@@ -1,46 +1,57 @@
 import { useState, useEffect } from 'react';
-import { getConnectionId, setConnectionId, apiFetch } from '../lib/api';
+import { getAuthToken, setAuthToken, clearAuth, apiFetch } from '../lib/api';
+
+interface ConnectionUser {
+  id: string;
+  api_domain: string;
+  pipedrive_user_id: number;
+  pipedrive_company_id: number;
+}
 
 export function useConnection() {
-  const [connectionId, setConnId] = useState<string | null>(getConnectionId());
+  const [authenticated, setAuthenticated] = useState<boolean>(!!getAuthToken());
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<{ api_domain: string; pipedrive_user_id: number } | null>(null);
+  const [user, setUser] = useState<ConnectionUser | null>(null);
 
   useEffect(() => {
-    // Check URL params for connection_id (OAuth callback redirect)
+    // Check URL params for token (OAuth callback redirect)
     const params = new URLSearchParams(window.location.search);
-    const idFromUrl = params.get('connection_id');
-    if (idFromUrl) {
-      setConnectionId(idFromUrl);
-      setConnId(idFromUrl);
+    const tokenFromUrl = params.get('token');
+    if (tokenFromUrl) {
+      setAuthToken(tokenFromUrl);
+      setAuthenticated(true);
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
   useEffect(() => {
-    if (!connectionId) {
+    if (!authenticated) {
       setLoading(false);
       return;
     }
     apiFetch('/auth/me')
-      .then((data) => setUser(data))
+      .then((res) => {
+        if (!res.ok) throw new Error('Not authenticated');
+        return res.json();
+      })
+      .then((data: ConnectionUser) => setUser(data))
       .catch(() => {
-        localStorage.removeItem('connectionId');
-        setConnId(null);
+        clearAuth();
+        setAuthenticated(false);
       })
       .finally(() => setLoading(false));
-  }, [connectionId]);
+  }, [authenticated]);
 
   const login = () => {
-    const apiUrl = import.meta.env.VITE_API_URL ?? '';
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     window.location.href = `${apiUrl}/auth/login`;
   };
 
   const logout = () => {
-    localStorage.removeItem('connectionId');
-    setConnId(null);
+    clearAuth();
+    setAuthenticated(false);
     setUser(null);
   };
 
-  return { connectionId, user, loading, login, logout };
+  return { connectionId: user?.id ?? null, authenticated, user, loading, login, logout };
 }

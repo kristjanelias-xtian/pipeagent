@@ -12,7 +12,7 @@ import { EmailDraftBar } from './components/EmailDraftBar';
 import { SettingsPanel } from './components/SettingsPanel';
 
 export default function App() {
-  const { connectionId, user, loading, login, logout } = useConnection();
+  const { connectionId, authenticated, user, loading, login, logout } = useConnection();
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -37,7 +37,7 @@ export default function App() {
     );
   }
 
-  if (!connectionId || !user) {
+  if (!authenticated || !user) {
     return <LoginScreen onLogin={login} />;
   }
 

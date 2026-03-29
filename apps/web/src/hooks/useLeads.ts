@@ -17,7 +17,8 @@ export function useLeads(connectionId: string | null) {
     if (!connectionId) return;
     setLoading(true);
     try {
-      const data = await apiFetch('/leads');
+      const res = await apiFetch('/leads');
+      const data = await res.json();
       setLeads(data);
     } catch (err) {
       console.error('Failed to fetch leads:', err);

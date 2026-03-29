@@ -113,10 +113,11 @@ export function ChatPanel({ leadId, logs }: ChatPanelProps) {
     setUserMessages((prev) => [...prev, { role: 'user', content: msg, timestamp: new Date().toISOString() }]);
 
     try {
-      const res = await apiFetch('/chat/message', {
+      const httpRes = await apiFetch('/chat/message', {
         method: 'POST',
         body: JSON.stringify({ leadId, message: msg }),
       });
+      const res = await httpRes.json();
       if (res.existing) {
         const label = res.label ? ` (${String(res.label).toUpperCase()})` : '';
         const score = res.score != null ? `, score ${res.score}/100` : '';

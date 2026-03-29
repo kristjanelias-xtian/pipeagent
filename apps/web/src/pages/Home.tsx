@@ -41,7 +41,11 @@ export function Home() {
   const { connectionId, user } = useConnection();
   const activities = useRecentActivity(connectionId);
 
-  const domain = user?.api_domain?.replace('.pipedrive.com', '') ?? '';
+  const domain = user?.api_domain
+    ?.replace('https://', '')
+    ?.replace('http://', '')
+    ?.replace('.pipedrive.com', '')
+    ?? '';
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">

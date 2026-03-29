@@ -19,7 +19,6 @@ async function runResearch(state: AgentStateType): Promise<Partial<AgentStateTyp
   await logActivity(runId, 'research', 'node_enter', { org: organization?.name });
 
   const result = await researchSubgraph.invoke({
-    messages: [],
     orgName: organization?.name ?? 'Unknown',
     orgAddress: organization?.address ?? null,
     runId,

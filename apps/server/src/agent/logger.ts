@@ -38,7 +38,7 @@ export async function createRun(data: {
     .insert({
       ...data,
       agent_id: data.agent_id || 'lead-qualification',
-      status: 'pending',
+      status: 'running',
     })
     .select('id')
     .single();

@@ -101,10 +101,11 @@ export class PipedriveClient {
     subscription_url: string;
     event_action: string;
     event_object: string;
+    name?: string;
   }): Promise<Record<string, unknown>> {
     return this.request<Record<string, unknown>>('/webhooks', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ name: 'PipeAgent', ...data }),
     });
   }
 

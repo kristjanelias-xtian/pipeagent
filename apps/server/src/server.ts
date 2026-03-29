@@ -26,7 +26,19 @@ app.get('/health', (c) => c.json({ status: 'ok' }));
 app.route('/auth', auth);
 app.route('/webhooks', webhooks);
 
-app.use('/*', authMiddleware);
+// Protected API routes — auth middleware only on /api-prefixed or specific paths
+app.use('/chat/*', authMiddleware);
+app.use('/seed/*', authMiddleware);
+app.use('/leads/*', authMiddleware);
+app.use('/leads', authMiddleware);
+app.use('/deals/*', authMiddleware);
+app.use('/deals', authMiddleware);
+app.use('/settings/*', authMiddleware);
+app.use('/settings', authMiddleware);
+app.use('/hub-config/*', authMiddleware);
+app.use('/hub-config', authMiddleware);
+app.use('/agent-config/*', authMiddleware);
+app.use('/agent-config', authMiddleware);
 
 app.route('/chat', chat);
 app.route('/seed', seed);

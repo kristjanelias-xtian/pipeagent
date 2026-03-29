@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { getSupabase } from '../lib/supabase.js';
+import { getClientForConnection } from '../lib/connections.js';
 import type { IcpCriterion } from '@pipeagent/shared';
 
 const settings = new Hono();
@@ -65,6 +66,28 @@ settings.put('/', async (c) => {
 
   if (error) return c.json({ error: error.message }, 500);
   return c.json(data);
+});
+
+// Register Pipedrive webhook for lead.added
+settings.post('/register-webhook', async (c) => {
+  const connectionId = c.req.header('X-Connection-Id');
+  if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
+
+  const webhookUrl = process.env.WEBHOOK_URL;
+  if (!webhookUrl) return c.json({ error: 'WEBHOOK_URL not configured' }, 500);
+
+  try {
+    const client = await getClientForConnection(connectionId);
+    const result = await client.createWebhook({
+      subscription_url: `${webhookUrl}/webhooks/pipedrive`,
+      event_action: 'added',
+      event_object: 'lead',
+    });
+    return c.json({ status: 'registered', result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return c.json({ error: message }, 500);
+  }
 });
 
 export default settings;

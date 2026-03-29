@@ -80,9 +80,12 @@ auth.get('/callback', async (c) => {
           event_action: 'added',
           event_object: 'lead',
         });
-      } catch {
-        // Non-fatal: webhook registration failure shouldn't block auth
+        console.log(`Webhook registered: ${webhookUrl}/webhooks/pipedrive`);
+      } catch (webhookErr) {
+        console.error('Webhook registration failed:', webhookErr);
       }
+    } else {
+      console.warn('WEBHOOK_URL not set, skipping webhook registration');
     }
 
     return c.redirect(`${frontendUrl}?connection_id=${connection.id}`);

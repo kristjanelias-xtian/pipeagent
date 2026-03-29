@@ -26,27 +26,14 @@ app.get('/health', (c) => c.json({ status: 'ok' }));
 app.route('/auth', auth);
 app.route('/webhooks', webhooks);
 
-// Auth middleware for all API routes (skips /auth/login, /auth/callback, /health, /webhooks, and static files)
+// Auth middleware — only for known API paths
+const API_PREFIXES = ['/me', '/chat', '/seed', '/leads', '/deals', '/settings', '/hub-config', '/agent-config'];
 app.use('*', async (c, next) => {
   const path = c.req.path;
-  // Skip auth for public routes and static assets
-  if (
-    path === '/health' ||
-    path.startsWith('/auth/') ||
-    path.startsWith('/webhooks') ||
-    path.startsWith('/assets/') ||
-    path.endsWith('.js') ||
-    path.endsWith('.css') ||
-    path.endsWith('.html') ||
-    path.endsWith('.ico') ||
-    path.endsWith('.png') ||
-    path.endsWith('.svg') ||
-    path.endsWith('.woff2') ||
-    path === '/'
-  ) {
-    return next();
+  if (API_PREFIXES.some(prefix => path === prefix || path.startsWith(prefix + '/'))) {
+    return authMiddleware(c, next);
   }
-  return authMiddleware(c, next);
+  return next();
 });
 
 // /me endpoint (was /auth/me but needs auth middleware)

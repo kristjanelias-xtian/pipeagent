@@ -26,13 +26,14 @@ export class PipedriveClient {
     });
 
     if (!response.ok) {
-      throw new Error(`Pipedrive API error: ${response.status}`);
+      const body = await response.text();
+      throw new Error(`Pipedrive API error: ${response.status} - ${body}`);
     }
 
     const json = (await response.json()) as PipedriveApiResponse<T>;
 
     if (!json.success) {
-      throw new Error(`Pipedrive API error: ${response.status}`);
+      throw new Error(`Pipedrive API error: ${JSON.stringify(json)}`);
     }
 
     return json.data;

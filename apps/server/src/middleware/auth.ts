@@ -10,18 +10,26 @@ export interface AuthPayload {
   exp: number;
 }
 
+export type AppVariables = {
+  connectionId: string;
+  pipedriveUserId: number;
+  companyId: number;
+};
+
+export type AppEnv = { Variables: AppVariables };
+
 export async function createSessionToken(payload: Omit<AuthPayload, 'exp'>): Promise<string> {
   return sign({ ...payload, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 }, JWT_SECRET);
 }
 
-export async function authMiddleware(c: Context, next: Next) {
+export async function authMiddleware(c: Context<AppEnv>, next: Next) {
   const authHeader = c.req.header('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
   const token = authHeader.slice(7);
   try {
-    const payload = await verify(token, JWT_SECRET) as AuthPayload;
+    const payload = await verify(token, JWT_SECRET, 'HS256') as unknown as AuthPayload;
     c.set('connectionId', payload.connectionId);
     c.set('pipedriveUserId', payload.pipedriveUserId);
     c.set('companyId', payload.companyId);

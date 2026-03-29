@@ -14,9 +14,11 @@ import chat from './routes/chat.js';
 import seed from './routes/seed.js';
 import leads from './routes/leads.js';
 import settings from './routes/settings.js';
-import { authMiddleware } from './middleware/auth.js';
+import hubConfig from './routes/hub-config.js';
+import agentConfigRoutes from './routes/agent-config.js';
+import { authMiddleware, type AppEnv } from './middleware/auth.js';
 
-const app = new Hono();
+const app = new Hono<AppEnv>();
 
 app.use('*', cors());
 app.get('/health', (c) => c.json({ status: 'ok' }));
@@ -29,6 +31,8 @@ app.route('/chat', chat);
 app.route('/seed', seed);
 app.route('/leads', leads);
 app.route('/settings', settings);
+app.route('/hub-config', hubConfig);
+app.route('/agent-config', agentConfigRoutes);
 
 // In production, serve the frontend static files
 const __dirname = dirname(fileURLToPath(import.meta.url));

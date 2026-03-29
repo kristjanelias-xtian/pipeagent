@@ -2,8 +2,9 @@ import { Hono } from 'hono';
 import { createRun } from '../agent/logger.js';
 import { runQualification } from '../agent/graph.js';
 import { getSupabase } from '../lib/supabase.js';
+import type { AppEnv } from '../middleware/auth.js';
 
-const chat = new Hono();
+const chat = new Hono<AppEnv>();
 
 // Trigger a chat-based agent run (skips if lead already has a completed/paused/running run)
 chat.post('/message', async (c) => {

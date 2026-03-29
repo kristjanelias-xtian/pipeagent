@@ -2,8 +2,9 @@ import { Hono } from 'hono';
 import { getSupabase } from '../lib/supabase.js';
 import { getClientForConnection } from '../lib/connections.js';
 import type { IcpCriterion } from '@pipeagent/shared';
+import type { AppEnv } from '../middleware/auth.js';
 
-const settings = new Hono();
+const settings = new Hono<AppEnv>();
 
 const DEFAULT_ICP_CRITERIA: IcpCriterion[] = [
   { name: 'Company Size Fit', description: 'Mid-market (50-1000 employees) scores highest', weight: 10 },

@@ -2,9 +2,9 @@ import { Hono } from 'hono';
 import { getAuthorizationUrl, exchangeCodeForToken } from '../pipedrive/oauth.js';
 import { upsertConnection, getConnection } from '../lib/connections.js';
 import { PipedriveClient } from '../pipedrive/client.js';
-import { createSessionToken } from '../middleware/auth.js';
+import { createSessionToken, type AppEnv } from '../middleware/auth.js';
 
-const auth = new Hono();
+const auth = new Hono<AppEnv>();
 
 auth.get('/login', (c) => {
   const clientId = process.env.PIPEDRIVE_CLIENT_ID;

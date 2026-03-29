@@ -109,6 +109,22 @@ export class PipedriveClient {
     });
   }
 
+  async createActivity(data: {
+    subject: string;
+    type: string;
+    done?: 0 | 1;
+    due_date?: string;
+    lead_id?: string;
+    person_id?: number;
+    org_id?: number;
+    note?: string;
+  }): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>('/activities', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async getLeads(params?: { limit?: number; start?: number }): Promise<PipedriveLead[]> {
     const query = params
       ? '?' + new URLSearchParams(

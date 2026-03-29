@@ -14,6 +14,7 @@ export function SettingsPanel({ settings, saving, onSave, onClose }: SettingsPan
     value_proposition: '',
     icp_criteria: [],
     outreach_tone: '',
+    followup_days: 3,
   });
 
   useEffect(() => {
@@ -89,6 +90,20 @@ export function SettingsPanel({ settings, saving, onSave, onClose }: SettingsPan
               placeholder="e.g. Professional but friendly, consultative..."
               className="w-full bg-gray-800 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
+          </div>
+
+          {/* Follow-up Days */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Follow-up Days</label>
+            <input
+              type="number"
+              value={form.followup_days}
+              onChange={(e) => setForm((prev) => ({ ...prev, followup_days: Number(e.target.value) }))}
+              min={1}
+              max={30}
+              className="w-24 bg-gray-800 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">Days until follow-up activity is scheduled after sending an email</p>
           </div>
 
           {/* ICP Criteria */}

@@ -17,6 +17,7 @@ export function useSettings(connectionId: string | null) {
         value_proposition: data.value_proposition,
         icp_criteria: data.icp_criteria,
         outreach_tone: data.outreach_tone,
+        followup_days: data.followup_days ?? 3,
       });
     } catch (err) {
       console.error('Failed to fetch settings:', err);

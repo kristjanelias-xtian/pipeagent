@@ -39,7 +39,7 @@ export async function fetchContext(state: AgentStateType): Promise<Partial<Agent
   let settings: BusinessProfile | null = null;
   const { data: profile } = await getSupabase()
     .from('business_profiles')
-    .select('business_description, value_proposition, icp_criteria, outreach_tone')
+    .select('business_description, value_proposition, icp_criteria, outreach_tone, followup_days')
     .eq('connection_id', connectionId)
     .single();
 
@@ -49,6 +49,7 @@ export async function fetchContext(state: AgentStateType): Promise<Partial<Agent
       value_proposition: profile.value_proposition,
       icp_criteria: profile.icp_criteria as IcpCriterion[],
       outreach_tone: profile.outreach_tone,
+      followup_days: profile.followup_days ?? 3,
     };
   }
 

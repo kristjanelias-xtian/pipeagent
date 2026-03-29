@@ -59,7 +59,19 @@ function summarizePayload(log: ActivityLogRow): string | null {
       return parts.length > 0 ? parts.join(' · ') : 'Research complete';
     }
     if (log.node_name === 'scoring') {
-      return p.response_preview ? String(p.response_preview).slice(0, 120) + '...' : null;
+      if (p.response_preview) {
+        // response_preview is a stringified JSON possibly wrapped in markdown code fences
+        const raw = String(p.response_preview).replace(/^```json\s*\n?/, '').replace(/\n?```$/, '');
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.overall_score != null) {
+            const parts = [`Score: ${parsed.overall_score}/100`];
+            if (parsed.recommendation) parts.push(parsed.recommendation);
+            return parts.join(' — ');
+          }
+        } catch { /* fall through */ }
+      }
+      return null;
     }
     if (log.node_name === 'saveResearch') {
       return p.org ? `Saved research for ${p.org}` : null;
@@ -93,6 +105,22 @@ function summarizePayload(log: ActivityLogRow): string | null {
   }
 
   return null;
+}
+
+function formatPayload(payload: Record<string, unknown>): string {
+  // Deep-parse any stringified JSON values (e.g. response_preview)
+  const cleaned = Object.fromEntries(
+    Object.entries(payload).map(([key, val]) => {
+      if (typeof val === 'string') {
+        const stripped = val.replace(/^```json\s*\n?/, '').replace(/\n?```$/, '');
+        try {
+          return [key, JSON.parse(stripped)];
+        } catch { /* keep original */ }
+      }
+      return [key, val];
+    })
+  );
+  return JSON.stringify(cleaned, null, 2);
 }
 
 function LogEntry({ log }: { log: ActivityLogRow }) {
@@ -133,7 +161,7 @@ function LogEntry({ log }: { log: ActivityLogRow }) {
       )}
       {expanded && (
         <pre className="mt-2 text-xs text-gray-500 overflow-x-auto max-h-40 bg-gray-900/80 p-2 rounded ml-5">
-          {JSON.stringify(log.payload, null, 2)}
+          {formatPayload(log.payload)}
         </pre>
       )}
     </div>

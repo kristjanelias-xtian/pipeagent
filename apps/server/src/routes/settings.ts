@@ -35,6 +35,7 @@ settings.get('/', async (c) => {
       value_proposition: '',
       icp_criteria: DEFAULT_ICP_CRITERIA,
       outreach_tone: '',
+      followup_days: 3,
     })
     .select()
     .single();
@@ -47,7 +48,7 @@ settings.put('/', async (c) => {
   if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
 
   const body = await c.req.json();
-  const { business_description, value_proposition, icp_criteria, outreach_tone } = body;
+  const { business_description, value_proposition, icp_criteria, outreach_tone, followup_days } = body;
 
   const { data, error } = await getSupabase()
     .from('business_profiles')
@@ -58,6 +59,7 @@ settings.put('/', async (c) => {
         value_proposition: value_proposition ?? '',
         icp_criteria: icp_criteria ?? DEFAULT_ICP_CRITERIA,
         outreach_tone: outreach_tone ?? '',
+        followup_days: followup_days ?? 3,
       },
       { onConflict: 'connection_id' },
     )

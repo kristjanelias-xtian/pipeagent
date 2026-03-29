@@ -82,6 +82,7 @@ export interface BusinessProfile {
   value_proposition: string;
   icp_criteria: IcpCriterion[];
   outreach_tone: string;
+  followup_days: number;
 }
 
 // --- Database rows ---

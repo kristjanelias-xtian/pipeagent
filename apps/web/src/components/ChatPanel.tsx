@@ -13,50 +13,96 @@ interface ChatMessage {
   timestamp: string;
 }
 
+function formatAgentMessage(log: ActivityLogRow): string | null {
+  const p = log.payload as Record<string, unknown>;
+
+  if (log.node_name === 'fetchContext' && log.event_type === 'node_exit') {
+    const parts: string[] = [];
+    if (p.lead_title) parts.push(`**${p.lead_title}**`);
+    if (p.org_name) parts.push(`at ${p.org_name}`);
+    if (p.person_name) parts.push(`(contact: ${p.person_name})`);
+    return parts.length > 0 ? `Found lead: ${parts.join(' ')}` : null;
+  }
+
+  if (log.node_name === 'checkMemory' && log.event_type === 'node_exit') {
+    if (p.fresh) return 'Found recent research in memory — skipping web search.';
+    return 'No recent research found. Starting web research...';
+  }
+
+  if (log.node_name === 'research' && log.event_type === 'node_exit') {
+    const parts: string[] = ['Research complete.'];
+    if (p.industry) parts.push(`Industry: ${p.industry}.`);
+    if (p.employee_count) parts.push(`~${p.employee_count} employees.`);
+    return parts.join(' ');
+  }
+
+  if (log.node_name === 'scoring' && log.event_type === 'decision') {
+    if (p.score != null && p.label) {
+      const label = String(p.label).toUpperCase();
+      const criteria = p.criteria as Array<{ name: string; score: number; max_score: number }> | undefined;
+      let msg = `**Score: ${p.score}/100 → ${label}**`;
+      if (criteria && criteria.length > 0) {
+        msg += '\n' + criteria.map(c => `  ${c.name}: ${c.score}/${c.max_score}`).join('\n');
+      }
+      return msg;
+    }
+    return null;
+  }
+
+  if (log.node_name === 'writeBack' && log.event_type === 'node_exit') {
+    return 'Updated lead in Pipedrive with score and label.';
+  }
+
+  if (log.node_name === 'outreach' && log.event_type === 'node_exit') {
+    if (p.subject) return `Email drafted: "${p.subject}"`;
+    return 'Email draft ready for review.';
+  }
+
+  if (log.event_type === 'decision' && p.type === 'hitl_interrupt') {
+    return 'Waiting for your review of the email draft below.';
+  }
+
+  if (log.event_type === 'decision' && p.type === 'hitl_response') {
+    const action = String(p.action);
+    const labels: Record<string, string> = {
+      send: 'Email sent.',
+      discard: 'Email discarded.',
+      edit: 'Email edited and sent.',
+    };
+    return labels[action] ?? `Action: ${action}`;
+  }
+
+  return null;
+}
+
 export function ChatPanel({ leadId, logs }: ChatPanelProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [userMessages, setUserMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Convert relevant logs to chat messages
+  // Reset user messages when lead changes
   useEffect(() => {
-    const agentMessages: ChatMessage[] = [];
-    for (const log of logs) {
-      if (log.event_type === 'llm_call' && log.payload.prompt_preview) {
-        agentMessages.push({
-          role: 'agent',
-          content: `**${log.node_name}** reasoning: ${String(log.payload.prompt_preview).slice(0, 150)}...`,
-          timestamp: log.created_at,
-        });
-      }
-      if (log.event_type === 'decision' && log.payload.type !== 'hitl_interrupt') {
-        agentMessages.push({
-          role: 'agent',
-          content: `**${log.node_name}**: ${JSON.stringify(log.payload, null, 0).slice(0, 200)}`,
-          timestamp: log.created_at,
-        });
-      }
-      if (log.event_type === 'node_exit' && log.node_name === 'scoring') {
-        const p = log.payload as Record<string, unknown>;
-        agentMessages.push({
-          role: 'agent',
-          content: `Scored lead: **${p.score ?? 'N/A'}**/100 → ${String(p.label ?? 'unknown').toUpperCase()}`,
-          timestamp: log.created_at,
-        });
-      }
+    setUserMessages([]);
+    setInput('');
+  }, [leadId]);
+
+  // Build agent messages from logs
+  const agentMessages: ChatMessage[] = [];
+  for (const log of logs) {
+    const content = formatAgentMessage(log);
+    if (content) {
+      agentMessages.push({ role: 'agent', content, timestamp: log.created_at });
     }
-    setMessages((prev) => {
-      const userMsgs = prev.filter((m) => m.role === 'user');
-      return [...userMsgs, ...agentMessages].sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-      );
-    });
-  }, [logs]);
+  }
+
+  const allMessages = [...userMessages, ...agentMessages].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [allMessages.length]);
 
   const send = async () => {
     if (!input.trim() || !leadId || sending) return;
@@ -64,15 +110,23 @@ export function ChatPanel({ leadId, logs }: ChatPanelProps) {
     const msg = input.trim();
     setInput('');
     setSending(true);
-    setMessages((prev) => [...prev, { role: 'user', content: msg, timestamp: new Date().toISOString() }]);
+    setUserMessages((prev) => [...prev, { role: 'user', content: msg, timestamp: new Date().toISOString() }]);
 
     try {
-      await apiFetch('/chat/message', {
+      const res = await apiFetch('/chat/message', {
         method: 'POST',
         body: JSON.stringify({ leadId, message: msg }),
       });
+      if (res.existing) {
+        const label = res.label ? ` (${String(res.label).toUpperCase()})` : '';
+        const score = res.score != null ? `, score ${res.score}/100` : '';
+        setUserMessages((prev) => [
+          ...prev,
+          { role: 'agent', content: `Lead already qualified${label}${score}. Use "Requalify" to run again.`, timestamp: new Date().toISOString() },
+        ]);
+      }
     } catch (err) {
-      setMessages((prev) => [
+      setUserMessages((prev) => [
         ...prev,
         { role: 'agent', content: `Error: ${err instanceof Error ? err.message : 'Unknown'}`, timestamp: new Date().toISOString() },
       ]);
@@ -89,10 +143,10 @@ export function ChatPanel({ leadId, logs }: ChatPanelProps) {
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {!leadId && <p className="text-sm text-gray-500">Select a lead to start chatting</p>}
-        {messages.map((msg, i) => (
+        {allMessages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
+              className={`max-w-[85%] px-3 py-2 rounded-lg text-sm whitespace-pre-wrap ${
                 msg.role === 'user'
                   ? 'bg-indigo-600 text-white'
                   : 'bg-gray-800 text-gray-300'

@@ -1,9 +1,12 @@
 import type { AgentRunRow } from '@pipeagent/shared';
+import type { PipedriveLead } from '../hooks/useLeads';
 
 interface LeadsListProps {
+  leads: PipedriveLead[];
   runs: AgentRunRow[];
   selectedLeadId: string | null;
   onSelectLead: (leadId: string) => void;
+  onRunAgent: (leadId: string) => void;
   onGenerateLeads: () => void;
   generating: boolean;
 }
@@ -14,16 +17,15 @@ const labelColors: Record<string, string> = {
   cold: 'bg-blue-500',
 };
 
-export function LeadsList({ runs, selectedLeadId, onSelectLead, onGenerateLeads, generating }: LeadsListProps) {
-  // Group runs by lead, show latest run per lead
-  const leadMap = new Map<string, AgentRunRow>();
+export function LeadsList({ leads, runs, selectedLeadId, onSelectLead, onRunAgent, onGenerateLeads, generating }: LeadsListProps) {
+  // Map runs by lead_id for quick lookup
+  const runMap = new Map<string, AgentRunRow>();
   for (const run of runs) {
-    const existing = leadMap.get(run.lead_id);
+    const existing = runMap.get(run.lead_id);
     if (!existing || run.created_at > existing.created_at) {
-      leadMap.set(run.lead_id, run);
+      runMap.set(run.lead_id, run);
     }
   }
-  const leads = Array.from(leadMap.values());
 
   return (
     <div className="flex flex-col h-full">
@@ -35,40 +37,69 @@ export function LeadsList({ runs, selectedLeadId, onSelectLead, onGenerateLeads,
         {leads.length === 0 && (
           <p className="p-4 text-sm text-gray-500">No leads yet. Generate some!</p>
         )}
-        {leads.map((run) => (
-          <button
-            key={run.lead_id}
-            onClick={() => onSelectLead(run.lead_id)}
-            className={`w-full text-left p-3 border-b border-gray-800 hover:bg-gray-800/50 transition ${
-              selectedLeadId === run.lead_id ? 'bg-gray-800' : ''
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-200 truncate">
-                {run.lead_id.slice(0, 8)}...
-              </span>
-              <div className="flex items-center gap-2">
-                {run.score != null && (
-                  <span className="text-xs text-gray-400">{run.score}</span>
-                )}
-                {run.label && (
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${labelColors[run.label]} text-white`}>
-                    {run.label.toUpperCase()}
-                  </span>
+        {leads.map((lead) => {
+          const run = runMap.get(lead.id);
+          const isSelected = selectedLeadId === lead.id;
+
+          return (
+            <button
+              key={lead.id}
+              onClick={() => onSelectLead(lead.id)}
+              className={`w-full text-left p-3 border-b border-gray-800 hover:bg-gray-800/50 transition ${
+                isSelected ? 'bg-gray-800' : ''
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-200 truncate">
+                  {lead.title}
+                </span>
+                <div className="flex items-center gap-2">
+                  {run?.score != null && (
+                    <span className="text-xs text-gray-400">{run.score}</span>
+                  )}
+                  {run?.label && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${labelColors[run.label]} text-white`}>
+                      {run.label.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                {run ? (
+                  <>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      run.status === 'running' ? 'bg-green-400 animate-pulse' :
+                      run.status === 'paused' ? 'bg-amber-400' :
+                      run.status === 'completed' ? 'bg-gray-500' : 'bg-red-500'
+                    }`} />
+                    <span className="text-xs text-gray-500">{run.status}</span>
+                    {(run.status === 'completed' || run.status === 'failed') && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRunAgent(lead.id);
+                        }}
+                        className="text-xs text-indigo-400 hover:text-indigo-300 ml-auto"
+                      >
+                        Requalify
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRunAgent(lead.id);
+                    }}
+                    className="text-xs text-indigo-400 hover:text-indigo-300"
+                  >
+                    Run Agent
+                  </button>
                 )}
               </div>
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`w-1.5 h-1.5 rounded-full ${
-                run.status === 'running' ? 'bg-green-400 animate-pulse' :
-                run.status === 'paused' ? 'bg-amber-400' :
-                run.status === 'completed' ? 'bg-gray-500' : 'bg-red-500'
-              }`} />
-              <span className="text-xs text-gray-500">{run.status}</span>
-              <span className="text-xs text-gray-600">{run.trigger}</span>
-            </div>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
 
       <div className="p-3 border-t border-gray-800">

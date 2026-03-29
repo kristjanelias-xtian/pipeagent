@@ -5,6 +5,7 @@ import type {
   ScoringResult,
   LeadLabel,
   EmailDraft,
+  BusinessProfile,
   PipedriveLead,
   PipedrivePerson,
   PipedriveOrganization,
@@ -64,6 +65,10 @@ export const AgentState = Annotation.Root({
     default: () => null,
   }),
   editedEmail: Annotation<EmailDraft | null>({
+    reducer: (_, next) => next,
+    default: () => null,
+  }),
+  settings: Annotation<BusinessProfile | null>({
     reducer: (_, next) => next,
     default: () => null,
   }),

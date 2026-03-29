@@ -1,7 +1,5 @@
 import { ChatAnthropic } from '@langchain/anthropic';
-import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import { StateGraph, Annotation, messagesStateReducer } from '@langchain/langgraph';
-import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { HumanMessage, type BaseMessage } from '@langchain/core/messages';
 import type { ResearchData } from '@pipeagent/shared';
 import { logActivity } from '../logger.js';
@@ -23,24 +21,22 @@ const ResearchState = Annotation.Root({
   }),
 });
 
-const tools = [
-  new TavilySearchResults({
-    apiKey: process.env.TAVILY_API_KEY,
-    maxResults: 5,
-  }),
-];
-
-const model = new ChatAnthropic({
-  model: 'claude-sonnet-4-20250514',
-  temperature: 0,
-}).bindTools(tools);
+function getModel() {
+  return new ChatAnthropic({
+    model: 'claude-sonnet-4-20250514',
+    temperature: 0,
+  }).bindTools([
+    {
+      name: 'web_search',
+      type: 'web_search_20250305',
+    } as any,
+  ]);
+}
 
 async function researchAgent(state: typeof ResearchState.State) {
-  const { orgName, orgAddress, runId, messages } = state;
+  const { orgName, orgAddress, runId } = state;
 
-  if (messages.length === 0) {
-    // Initial prompt
-    const prompt = `You are a company research analyst. Research the company "${orgName}"${orgAddress ? ` (address: ${orgAddress})` : ''}.
+  const prompt = `You are a company research analyst. Research the company "${orgName}"${orgAddress ? ` (address: ${orgAddress})` : ''}.
 
 Find and report:
 1. What the company does (brief description)
@@ -50,7 +46,7 @@ Find and report:
 5. Key technologies they use
 6. Recent notable news
 
-Use the search tool to find this information. Be thorough but concise. After gathering enough info, respond with a JSON block in this exact format:
+Use the web_search tool to find this information. Be thorough but concise. After gathering enough info, respond with a JSON block in this exact format:
 
 \`\`\`json
 {
@@ -65,22 +61,26 @@ Use the search tool to find this information. Be thorough but concise. After gat
 }
 \`\`\``;
 
-    await logActivity(runId, 'research', 'llm_call', { prompt_preview: prompt.slice(0, 200) });
-    const response = await model.invoke([new HumanMessage(prompt)]);
-    return { messages: [new HumanMessage(prompt), response] };
-  }
+  await logActivity(runId, 'research', 'llm_call', { prompt_preview: prompt.slice(0, 200) });
+  const response = await getModel().invoke([new HumanMessage(prompt)]);
+  return { messages: [new HumanMessage(prompt), response] };
+}
 
-  // Continue conversation (tool results fed back)
-  const lastMessage = messages[messages.length - 1];
-  await logActivity(runId, 'research', 'llm_call', { continuation: true });
-  const response = await model.invoke(messages);
-  return { messages: [response] };
+function extractTextContent(msg: BaseMessage): string {
+  if (typeof msg.content === 'string') return msg.content;
+  if (Array.isArray(msg.content)) {
+    return msg.content
+      .filter((block: any) => block.type === 'text')
+      .map((block: any) => block.text)
+      .join('\n');
+  }
+  return '';
 }
 
 function parseResearchResult(state: typeof ResearchState.State) {
-  const { messages, runId } = state;
+  const { messages } = state;
   const lastMsg = messages[messages.length - 1];
-  const content = typeof lastMsg.content === 'string' ? lastMsg.content : '';
+  const content = extractTextContent(lastMsg);
 
   const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
   if (jsonMatch) {
@@ -107,31 +107,11 @@ function parseResearchResult(state: typeof ResearchState.State) {
   };
 }
 
-function shouldContinue(state: typeof ResearchState.State): string {
-  const lastMsg = state.messages[state.messages.length - 1];
-  if (
-    lastMsg &&
-    'tool_calls' in lastMsg &&
-    Array.isArray(lastMsg.tool_calls) &&
-    lastMsg.tool_calls.length > 0
-  ) {
-    return 'tools';
-  }
-  return 'parse';
-}
-
-const toolNode = new ToolNode(tools);
-
 const researchGraph = new StateGraph(ResearchState)
   .addNode('agent', researchAgent)
-  .addNode('tools', toolNode)
   .addNode('parse', parseResearchResult)
   .addEdge('__start__', 'agent')
-  .addConditionalEdges('agent', shouldContinue, {
-    tools: 'tools',
-    parse: 'parse',
-  })
-  .addEdge('tools', 'agent')
+  .addEdge('agent', 'parse')
   .addEdge('parse', '__end__');
 
 export const researchSubgraph = researchGraph.compile();

@@ -69,6 +69,21 @@ export interface EmailDraft {
   body: string;
 }
 
+// --- Business profile / ICP ---
+
+export interface IcpCriterion {
+  name: string;
+  description: string;
+  weight: number;
+}
+
+export interface BusinessProfile {
+  business_description: string;
+  value_proposition: string;
+  icp_criteria: IcpCriterion[];
+  outreach_tone: string;
+}
+
 // --- Database rows ---
 
 export type AgentRunTrigger = 'webhook' | 'chat' | 'manual';

@@ -32,7 +32,7 @@ export function useConnection() {
   }, [connectionId]);
 
   const login = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const apiUrl = import.meta.env.VITE_API_URL ?? '';
     window.location.href = `${apiUrl}/auth/login`;
   };
 

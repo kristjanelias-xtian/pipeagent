@@ -76,7 +76,7 @@ auth.get('/callback', async (c) => {
     if (webhookUrl) {
       try {
         await pdClient.createWebhook({
-          subscription_url: `${webhookUrl}/webhooks/lead`,
+          subscription_url: `${webhookUrl}/webhooks/pipedrive`,
           event_action: 'added',
           event_object: 'lead',
         });

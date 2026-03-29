@@ -14,6 +14,18 @@ const OutreachState = Annotation.Root({
     reducer: (_, n) => n,
     default: () => null,
   }),
+  businessDescription: Annotation<string>({
+    reducer: (_, n) => n,
+    default: () => '',
+  }),
+  valueProposition: Annotation<string>({
+    reducer: (_, n) => n,
+    default: () => '',
+  }),
+  outreachTone: Annotation<string>({
+    reducer: (_, n) => n,
+    default: () => '',
+  }),
   runId: Annotation<string>,
   draft: Annotation<EmailDraft | null>({
     reducer: (_, n) => n,
@@ -21,20 +33,32 @@ const OutreachState = Annotation.Root({
   }),
 });
 
-const model = new ChatAnthropic({
-  model: 'claude-sonnet-4-20250514',
-  temperature: 0.7,
-});
+function getModel() {
+  return new ChatAnthropic({
+    model: 'claude-sonnet-4-20250514',
+    temperature: 0.7,
+  });
+}
 
 async function draftEmail(state: typeof OutreachState.State) {
-  const { research, scoring, label, leadTitle, personName, runId } = state;
+  const { research, scoring, label, leadTitle, personName, businessDescription, valueProposition, outreachTone, runId } = state;
 
-  const toneGuide =
+  const defaultTone =
     label === 'hot'
       ? 'Eager and specific. Reference concrete company details. Show clear value prop.'
       : 'Soft touch, exploratory. Ask discovery questions. Low pressure.';
 
+  const toneGuide = outreachTone || defaultTone;
+
+  const businessContext = businessDescription
+    ? `\n**Your Company:** ${businessDescription}`
+    : '';
+  const valuePropContext = valueProposition
+    ? `\n**What you sell:** ${valueProposition}`
+    : '';
+
   const prompt = `You are a sales development representative writing a personalized outreach email.
+${businessContext}${valuePropContext}
 
 **Lead:** ${leadTitle}
 **Contact:** ${personName ?? 'the team'}
@@ -57,7 +81,7 @@ Respond with ONLY a JSON block:
 \`\`\``;
 
   await logActivity(runId, 'outreach', 'llm_call', { label, person: personName });
-  const response = await model.invoke([new HumanMessage(prompt)]);
+  const response = await getModel().invoke([new HumanMessage(prompt)]);
   const content = typeof response.content === 'string' ? response.content : '';
 
   let draft: EmailDraft = { subject: 'Follow up', body: content };
@@ -88,8 +112,8 @@ Respond with ONLY a JSON block:
 
 // Outreach sub-graph only handles drafting. HITL interrupt lives in parent graph.
 const outreachGraph = new StateGraph(OutreachState)
-  .addNode('draft', draftEmail)
-  .addEdge('__start__', 'draft')
-  .addEdge('draft', '__end__');
+  .addNode('draftEmail', draftEmail)
+  .addEdge('__start__', 'draftEmail')
+  .addEdge('draftEmail', '__end__');
 
 export const outreachSubgraph = outreachGraph.compile();

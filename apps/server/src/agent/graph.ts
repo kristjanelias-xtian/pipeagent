@@ -35,7 +35,7 @@ async function runResearch(state: AgentStateType): Promise<Partial<AgentStateTyp
 }
 
 async function runScoring(state: AgentStateType): Promise<Partial<AgentStateType>> {
-  const { research, lead, runId } = state;
+  const { research, lead, runId, settings } = state;
   if (!research) return {};
 
   await logActivity(runId, 'scoring', 'node_enter');
@@ -44,6 +44,7 @@ async function runScoring(state: AgentStateType): Promise<Partial<AgentStateType
     research,
     leadTitle: lead?.title ?? 'Unknown Lead',
     runId,
+    icpCriteria: settings?.icp_criteria ?? [],
     result: null,
     label: null,
   });
@@ -58,7 +59,7 @@ async function runScoring(state: AgentStateType): Promise<Partial<AgentStateType
 }
 
 async function runOutreach(state: AgentStateType): Promise<Partial<AgentStateType>> {
-  const { research, scoring, label, lead, person, runId } = state;
+  const { research, scoring, label, lead, person, runId, settings } = state;
   if (!research || !scoring || !label) return {};
 
   await logActivity(runId, 'outreach', 'node_enter', { label });
@@ -70,6 +71,9 @@ async function runOutreach(state: AgentStateType): Promise<Partial<AgentStateTyp
     label,
     leadTitle: lead?.title ?? 'Unknown Lead',
     personName: person?.name ?? null,
+    businessDescription: settings?.business_description ?? '',
+    valueProposition: settings?.value_proposition ?? '',
+    outreachTone: settings?.outreach_tone ?? '',
     runId,
     draft: null,
   });
@@ -118,11 +122,11 @@ async function hitlReview(state: AgentStateType): Promise<Partial<AgentStateType
 // Conditional edge functions
 
 function shouldSkipResearch(state: AgentStateType): string {
-  return state.memoryFresh ? 'scoring' : 'research';
+  return state.memoryFresh ? 'runScoring' : 'runResearch';
 }
 
 function shouldSkipOutreach(state: AgentStateType): string {
-  return state.label === 'cold' ? 'logActivity' : 'outreach';
+  return state.label === 'cold' ? 'logActivityNode' : 'runOutreach';
 }
 
 // Build the graph
@@ -130,30 +134,30 @@ function shouldSkipOutreach(state: AgentStateType): string {
 const workflow = new StateGraph(AgentState)
   .addNode('fetchContext', fetchContext)
   .addNode('checkMemory', checkMemory)
-  .addNode('research', runResearch)
+  .addNode('runResearch', runResearch)
   .addNode('saveResearch', saveResearch)
-  .addNode('scoring', runScoring)
+  .addNode('runScoring', runScoring)
   .addNode('writeBack', writeBack)
-  .addNode('outreach', runOutreach)
+  .addNode('runOutreach', runOutreach)
   .addNode('hitlReview', hitlReview)
-  .addNode('logActivity', logActivityNode)
+  .addNode('logActivityNode', logActivityNode)
   // Edges
   .addEdge('__start__', 'fetchContext')
   .addEdge('fetchContext', 'checkMemory')
   .addConditionalEdges('checkMemory', shouldSkipResearch, {
-    research: 'research',
-    scoring: 'scoring',
+    runResearch: 'runResearch',
+    runScoring: 'runScoring',
   })
-  .addEdge('research', 'saveResearch')
-  .addEdge('saveResearch', 'scoring')
-  .addEdge('scoring', 'writeBack')
+  .addEdge('runResearch', 'saveResearch')
+  .addEdge('saveResearch', 'runScoring')
+  .addEdge('runScoring', 'writeBack')
   .addConditionalEdges('writeBack', shouldSkipOutreach, {
-    outreach: 'outreach',
-    logActivity: 'logActivity',
+    runOutreach: 'runOutreach',
+    logActivityNode: 'logActivityNode',
   })
-  .addEdge('outreach', 'hitlReview')
-  .addEdge('hitlReview', 'logActivity')
-  .addEdge('logActivity', '__end__');
+  .addEdge('runOutreach', 'hitlReview')
+  .addEdge('hitlReview', 'logActivityNode')
+  .addEdge('logActivityNode', '__end__');
 
 export async function getCompiledGraph() {
   const checkpointer = await getCheckpointer();

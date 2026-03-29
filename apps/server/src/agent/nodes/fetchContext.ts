@@ -1,6 +1,8 @@
 import type { AgentStateType } from '../state.js';
+import type { BusinessProfile, IcpCriterion } from '@pipeagent/shared';
 import { logActivity } from '../logger.js';
 import { getClientForConnection } from '../../lib/connections.js';
+import { getSupabase } from '../../lib/supabase.js';
 
 export async function fetchContext(state: AgentStateType): Promise<Partial<AgentStateType>> {
   const { connectionId, leadId, runId } = state;
@@ -33,10 +35,28 @@ export async function fetchContext(state: AgentStateType): Promise<Partial<Agent
     });
   }
 
+  // Fetch business profile / settings
+  let settings: BusinessProfile | null = null;
+  const { data: profile } = await getSupabase()
+    .from('business_profiles')
+    .select('business_description, value_proposition, icp_criteria, outreach_tone')
+    .eq('connection_id', connectionId)
+    .single();
+
+  if (profile) {
+    settings = {
+      business_description: profile.business_description,
+      value_proposition: profile.value_proposition,
+      icp_criteria: profile.icp_criteria as IcpCriterion[],
+      outreach_tone: profile.outreach_tone,
+    };
+  }
+
   await logActivity(runId, 'fetchContext', 'node_exit', {
     lead_title: lead.title,
     org_name: organization?.name ?? 'none',
+    has_settings: !!settings,
   });
 
-  return { lead, person, organization };
+  return { lead, person, organization, settings };
 }

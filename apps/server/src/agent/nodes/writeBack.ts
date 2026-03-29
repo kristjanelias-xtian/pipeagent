@@ -26,16 +26,22 @@ export async function writeBack(state: AgentStateType): Promise<Partial<AgentSta
   }
 
   if (research) {
+    const criteriaRows = scoring
+      ? scoring.criteria.map((c) =>
+          `<tr><td>${c.name}</td><td><strong>${c.score}/${c.max_score}</strong></td><td>${c.reasoning}</td></tr>`
+        ).join('')
+      : '';
+
     const noteContent = [
-      `## Agent Qualification Report`,
-      `**Score:** ${scoring?.overall_score ?? 'N/A'}/100 (${label?.toUpperCase() ?? 'N/A'})`,
-      `**Company:** ${research.company_description}`,
-      `**Employees:** ${research.employee_count ?? 'Unknown'}`,
-      `**Industry:** ${research.industry ?? 'Unknown'}`,
-      `**Funding:** ${research.funding_stage ?? 'Unknown'}`,
-      scoring ? `\n### Scoring Breakdown\n${scoring.criteria.map((c) => `- ${c.name}: ${c.score}/${c.max_score} — ${c.reasoning}`).join('\n')}` : '',
-      scoring ? `\n**Recommendation:** ${scoring.recommendation}` : '',
-    ].join('\n');
+      `<h2>Agent Qualification Report</h2>`,
+      `<p><strong>Score:</strong> ${scoring?.overall_score ?? 'N/A'}/100 (${label?.toUpperCase() ?? 'N/A'})</p>`,
+      `<p><strong>Company:</strong> ${research.company_description}</p>`,
+      `<p><strong>Employees:</strong> ${research.employee_count ?? 'Unknown'}</p>`,
+      `<p><strong>Industry:</strong> ${research.industry ?? 'Unknown'}</p>`,
+      `<p><strong>Funding:</strong> ${research.funding_stage ?? 'Unknown'}</p>`,
+      scoring ? `<h3>Scoring Breakdown</h3><table><tr><th>Criterion</th><th>Score</th><th>Reasoning</th></tr>${criteriaRows}</table>` : '',
+      scoring ? `<p><strong>Recommendation:</strong> ${scoring.recommendation}</p>` : '',
+    ].join('');
 
     await client.addNote({ content: noteContent, lead_id: leadId });
     await logActivity(runId, 'writeBack', 'tool_call', {

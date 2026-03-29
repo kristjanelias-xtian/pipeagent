@@ -5,7 +5,7 @@ import { getSupabase } from '../lib/supabase.js';
 
 const chat = new Hono();
 
-// Trigger a chat-based agent run
+// Trigger a chat-based agent run (skips if lead already has a completed/paused/running run)
 chat.post('/message', async (c) => {
   const connectionId = c.req.header('X-Connection-Id');
   if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
@@ -17,6 +17,27 @@ chat.post('/message', async (c) => {
 
   if (!leadId || !message) {
     return c.json({ error: 'Missing leadId or message' }, 400);
+  }
+
+  // Check for existing run on this lead
+  const { data: existingRun } = await getSupabase()
+    .from('agent_runs')
+    .select('*')
+    .eq('connection_id', connectionId)
+    .eq('lead_id', leadId)
+    .in('status', ['completed', 'paused', 'running'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (existingRun) {
+    return c.json({
+      existing: true,
+      run_id: existingRun.id,
+      status: existingRun.status,
+      score: existingRun.score,
+      label: existingRun.label,
+    });
   }
 
   const runId = await createRun({
@@ -34,6 +55,36 @@ chat.post('/message', async (c) => {
     userMessage: message,
   }).catch((err) => {
     console.error(`Chat qualification failed for run ${runId}:`, err);
+  });
+
+  return c.json({ run_id: runId });
+});
+
+// Force a new agent run (requalify), always creates a new run
+chat.post('/run', async (c) => {
+  const connectionId = c.req.header('X-Connection-Id');
+  if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
+
+  const { leadId } = (await c.req.json()) as { leadId: string };
+
+  if (!leadId) {
+    return c.json({ error: 'Missing leadId' }, 400);
+  }
+
+  const runId = await createRun({
+    connection_id: connectionId,
+    lead_id: leadId,
+    trigger: 'chat',
+  });
+
+  runQualification({
+    connectionId,
+    leadId,
+    runId,
+    trigger: 'chat',
+    userMessage: 'Requalify this lead',
+  }).catch((err) => {
+    console.error(`Requalify failed for run ${runId}:`, err);
   });
 
   return c.json({ run_id: runId });

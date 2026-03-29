@@ -24,26 +24,33 @@ export async function fetchDealContext(
   const client = await getClientForConnection(connectionId);
   const supabase = getSupabase();
 
-  // Fetch deal data in parallel
-  const [deal, activities, notes, participantsRaw, stages] = await Promise.all([
-    client.getDeal(dealId),
-    client.getDealActivities(dealId),
-    client.getDealNotes(dealId),
-    client.getDealParticipants(dealId),
-    client.getStages(),
+  // Fetch deal (required) and optional enrichment data
+  const deal = await client.getDeal(dealId);
+
+  // These calls may fail with 403 if OAuth scopes are missing — gracefully degrade
+  const safeCall = <T>(fn: () => Promise<T>, fallback: T): Promise<T> =>
+    fn().catch(() => fallback);
+
+  const [activities, notes, participantsRaw, stages] = await Promise.all([
+    safeCall(() => client.getDealActivities(dealId), []),
+    safeCall(() => client.getDealNotes(dealId), []),
+    safeCall(() => client.getDealParticipants(dealId), []),
+    safeCall(() => client.getStages(), []),
   ]);
 
-  // Resolve participants to persons
-  const participants: PipedrivePerson[] = await Promise.all(
-    participantsRaw
-      .filter((p) => p.person_id)
-      .map((p) => client.getPerson(p.person_id)),
-  );
+  // Resolve participants to persons (may also fail on scope)
+  const participants: PipedrivePerson[] = (
+    await Promise.all(
+      participantsRaw
+        .filter((p) => p.person_id)
+        .map((p) => safeCall(() => client.getPerson(p.person_id), null as unknown as PipedrivePerson)),
+    )
+  ).filter(Boolean);
 
   // Resolve organization if present
   let organization = null;
   if (deal.org_id) {
-    organization = await client.getOrganization(deal.org_id);
+    organization = await safeCall(() => client.getOrganization(deal.org_id!), null);
   }
 
   // Resolve stage name

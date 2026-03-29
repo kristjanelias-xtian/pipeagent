@@ -1,8 +1,17 @@
 # Architecture Guide
 
-This document explains how PipeAgent works end-to-end — the system flow, agent pipeline, data model, and frontend architecture. It's written for developers joining the project.
+This document explains how PipeAgent works end-to-end — the hub architecture, agent pipelines, data model, and frontend design. It's written for developers joining the project.
 
 ## System Overview
+
+PipeAgent is a multi-agent hub for Pipedrive CRM. The hub hosts specialized agents that each operate on a specific Pipedrive data scope (leads, deals, contacts, pipeline). Two agents are currently active:
+
+- **Lead Qualification** — triggered by `lead.added` webhook or manual run, qualifies leads against ICP criteria, drafts outreach emails with human-in-the-loop review
+- **Deal Coach** — triggered manually per deal, analyzes deal health by examining activities/notes/participants, scores risk, and suggests actions via an AI chat interface
+
+Four additional agents are registered in the hub as simulated placeholders: Meeting Prep, Email Composer, Data Enrichment, and Pipeline Forecaster.
+
+### Lead Qualification Flow
 
 When a lead is added to Pipedrive, here's what happens:
 
@@ -15,13 +24,25 @@ When a lead is added to Pipedrive, here's what happens:
 7. **Human review** — The pipeline pauses. The user sees the email draft in the UI and can send, edit, or discard it
 8. **Resume** — Once the user acts, the pipeline resumes and logs the final activity
 
+### Deal Coach Flow
+
+When a user selects a deal and triggers analysis:
+
+1. **Fetch context** — Pull deal details, activities, notes, participants, organization, and pipeline stage from Pipedrive; load hub-level global context and agent-level local context from the database
+2. **Analyze signals** — Claude analyzes the deal data to extract signals categorized as positive, negative, or warning
+3. **Score health** — Calculate a health score (0-100) based on signal ratio, activity recency, and stage staleness
+4. **Generate actions** — Suggest 3-5 prioritized actions (email, task, meeting, research) with reasoning
+5. **Chat** — User can ask follow-up coaching questions; Claude responds using the cached analysis and conversation history
+
 The frontend shows all of this in realtime via Supabase Realtime subscriptions.
 
-## Agent Pipeline
+## Agent Implementations
 
 The agent is a LangGraph `StateGraph` defined in `apps/server/src/agent/graph.ts`. It uses PostgreSQL checkpointing so execution can pause at the HITL step and resume later (even after server restarts).
 
-### State Machine
+### Lead Qualification Agent
+
+#### State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -43,7 +64,7 @@ stateDiagram-v2
     logActivity --> [*]
 ```
 
-### Node Details
+#### Node Details
 
 | Node | File | What it does |
 |------|------|-------------|
@@ -57,14 +78,44 @@ stateDiagram-v2
 | `hitlReview` | `graph.ts` | Calls LangGraph `interrupt()` — pauses execution and checkpoints state. Sets run status to `paused`. |
 | `logActivity` | `nodes/logActivity.ts` | Marks the run as `completed` (or `failed`). |
 
-### Conditional Routing
+#### Conditional Routing
 
 Two conditional edges control the flow:
 
 - **`shouldSkipResearch`** — After `checkMemory`: if `state.memoryFresh` is true, skip directly to `runScoring`
 - **`shouldSkipOutreach`** — After `writeBack`: if `state.label === 'cold'`, skip to `logActivity` (no email for cold leads)
 
+### Deal Coach Agent
+
+The Deal Coach is a LangGraph `StateGraph` defined in `apps/server/src/agents/deal-coach/graph.ts`. Unlike Lead Qualification, it runs synchronously (no HITL interrupt) and includes a separate chat endpoint.
+
+#### State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> fetchDealContext
+    fetchDealContext --> analyzeSignals
+    analyzeSignals --> scoreHealth
+    scoreHealth --> generateActions
+    generateActions --> [*]
+```
+
+#### Node Details
+
+| Node | File | What it does |
+|------|------|-------------|
+| `fetchDealContext` | `nodes.ts` | Fetches deal, activities, notes, participants, org, and stage from Pipedrive. Loads `hub_config.global_context` and `agent_config.local_context`. |
+| `analyzeSignals` | `nodes.ts` | Claude Sonnet analyzes the full deal context and extracts typed signals (positive/negative/warning). |
+| `scoreHealth` | `nodes.ts` | Computes health score (0-100) from signal ratio, days since last activity, and days in current stage. |
+| `generateActions` | `nodes.ts` | Claude Sonnet suggests 3-5 prioritized actions with reasoning. Upserts results to `deal_analyses` table. |
+
+#### Chat Endpoint
+
+The Deal Coach also provides a chat interface at `POST /deals/:dealId/chat`. This is separate from the LangGraph graph — it uses the cached `deal_analyses` entry plus `deal_chat_messages` history to answer coaching questions about the deal via Claude.
+
 ## Sub-agents
+
+(Lead Qualification agent only — Deal Coach uses inline Claude calls in its graph nodes.)
 
 Each sub-agent is a compiled LangGraph subgraph in `apps/server/src/agent/subagents/`. They have their own state annotations and are invoked from wrapper functions in the parent graph.
 
@@ -125,6 +176,7 @@ agent_runs
 ├── id (UUID, PK)
 ├── connection_id → connections.id
 ├── lead_id
+├── agent_id (TEXT, default 'lead-qualification')
 ├── trigger ('webhook' | 'chat' | 'manual')
 ├── status ('running' | 'paused' | 'completed' | 'failed')
 ├── graph_state (JSONB)
@@ -134,6 +186,7 @@ agent_runs
 activity_logs                          ← Supabase Realtime enabled
 ├── id (UUID, PK)
 ├── run_id → agent_runs.id
+├── agent_id (TEXT)
 ├── node_name
 ├── event_type
 ├── payload (JSONB)
@@ -161,14 +214,52 @@ business_profiles
 ├── value_proposition
 ├── icp_criteria (JSONB array)
 └── outreach_tone
+
+hub_config
+├── id (UUID, PK)
+├── connection_id → connections.id (UNIQUE)
+├── global_context (TEXT)
+├── created_at
+└── updated_at
+
+agent_config
+├── id (UUID, PK)
+├── connection_id → connections.id
+├── agent_id (TEXT)
+├── local_context (TEXT)
+├── created_at
+├── updated_at
+└── UNIQUE(connection_id, agent_id)
+
+deal_analyses
+├── id (UUID, PK)
+├── connection_id → connections.id
+├── pipedrive_deal_id (INTEGER)
+├── health_score (INTEGER)
+├── signals (JSONB)
+├── actions (JSONB)
+├── raw_context (JSONB)
+├── created_at
+├── updated_at
+└── UNIQUE(connection_id, pipedrive_deal_id)
+
+deal_chat_messages
+├── id (UUID, PK)
+├── connection_id → connections.id
+├── pipedrive_deal_id (INTEGER)
+├── role ('user' | 'assistant')
+├── content (TEXT)
+└── created_at
 ```
 
 ### Realtime
 
-Supabase Realtime is enabled on `activity_logs`, `agent_runs`, and `email_drafts`. The frontend subscribes to channels:
+Supabase Realtime is enabled on `activity_logs`, `agent_runs`, `email_drafts`, `deal_analyses`, and `deal_chat_messages`. The frontend subscribes to channels:
 - `logs-{runId}` — new activity log entries (powers the Agent Inspector)
 - `runs-{connectionId}` — run status changes (updates lead badges)
 - `draft-{runId}` — email draft creation/updates (triggers EmailDraftBar)
+- `deal-analysis-{connectionId}` — deal analysis updates (powers Deal Coach workspace)
+- `deal-chat-{connectionId}` — new chat messages
 
 ## Frontend Architecture
 
@@ -177,44 +268,52 @@ React 19 SPA built with Vite 6 and Tailwind CSS 4. Located in `apps/web/`.
 ### Layout
 
 ```
-┌─────────────┬─────────────────────┬──────────────┐
-│  LeadsList  │   AgentInspector    │  ChatPanel   │
-│  (left)     │   (center)          │  (right)     │
-│             │                     │              │
-│  • Lead     │   • Activity log    │  • Messages  │
-│    cards    │     entries         │  • Run       │
-│  • Score    │   • Node names      │    button    │
-│    badges   │   • Timestamps      │              │
-│  • Select   │                     │              │
-│    + run    │                     │              │
-├─────────────┴─────────────────────┴──────────────┤
-│  EmailDraftBar (bottom, shown when draft exists) │
-│  • Subject + body preview                        │
-│  • Send / Edit / Discard buttons                 │
-└──────────────────────────────────────────────────┘
-
-         SettingsPanel (modal overlay)
+┌──────────────────────────────────────────────────────────┐
+│  TopBar  (logo: "Agent Hub", domain, avatar)             │
+├────────┬─────────────────────────────────────────────────┤
+│        │                                                 │
+│ Side-  │  Content (React Router outlet)                  │
+│ bar    │                                                 │
+│        │  Home:        Agent grid + recent activity      │
+│ • Home │  /agent/:id:  Agent-specific workspace          │
+│ • Agents│  /settings:   Global + per-agent config        │
+│ • Build │  /build:      Custom agent placeholder         │
+│ • Settings│                                              │
+│        │                                                 │
+└────────┴─────────────────────────────────────────────────┘
 ```
 
 ### Key Components
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| `App` | `App.tsx` | Root layout, state management, orchestration |
-| `LoginScreen` | `LoginScreen.tsx` | OAuth login (shown when no `connectionId`) |
-| `LeadsList` | `LeadsList.tsx` | Lead cards with score badges, run triggers |
-| `AgentInspector` | `AgentInspector.tsx` | Realtime activity log viewer |
-| `ChatPanel` | `ChatPanel.tsx` | Agent messages and action controls |
-| `EmailDraftBar` | `EmailDraftBar.tsx` | Email review with HITL actions |
-| `SettingsPanel` | `SettingsPanel.tsx` | Business profile + ICP criteria editor |
+| `HubShell` | `components/HubShell.tsx` | Top-level layout: TopBar + Sidebar + outlet |
+| `TopBar` | `components/TopBar.tsx` | Logo, Pipedrive domain, user avatar |
+| `Sidebar` | `components/Sidebar.tsx` | Collapsible nav: agents, home, settings, build |
+| `Home` | `pages/Home.tsx` | Agent grid with status badges + recent activity feed |
+| `Settings` | `pages/Settings.tsx` | Tabs: Business Context (global + per-agent), Connection, Notifications |
+| `LoginPage` | `pages/LoginPage.tsx` | OAuth login screen |
+| `BuildYourOwn` | `pages/BuildYourOwn.tsx` | Placeholder for custom agent development |
+| `LeadsList` | `agents/lead-qualification/LeadsList.tsx` | Lead cards with score badges, run triggers |
+| `AgentInspector` | `agents/lead-qualification/AgentInspector.tsx` | Realtime activity log viewer |
+| `ChatPanel` | `agents/lead-qualification/ChatPanel.tsx` | Agent messages and action controls |
+| `EmailDraftBar` | `agents/lead-qualification/EmailDraftBar.tsx` | Email review with HITL actions |
+| `DealList` | `agents/deal-coach/DealList.tsx` | Filterable deal cards (All/At Risk/Action Needed) |
+| `DealAnalysis` | `agents/deal-coach/DealAnalysis.tsx` | Health score, signals, and action cards |
+| `DealChat` | `agents/deal-coach/DealChat.tsx` | Coaching chat with suggested prompts |
 
 ### Hooks
 
 | Hook | Purpose |
 |------|---------|
-| `useConnection` | Auth state, login/logout, connectionId from localStorage |
+| `useConnection` | Auth state, login/logout, JWT token management |
 | `useLeads` | Fetch leads from `/leads` endpoint |
+| `useDeals` | Fetch deals from `/deals` endpoint |
+| `useDealAnalysis` | Trigger analysis, poll results, manage deal chat messages |
 | `useSettings` | Fetch/update business profile from `/settings` |
+| `useHubConfig` | Fetch/update global context from `/hub-config` |
+| `useAgentConfig` | Fetch/update per-agent local context from `/agent-config` |
+| `useRecentActivity` | Fetch recent activity logs for the home page |
 | `useSupabaseRealtime` | Exports `useActivityLogs`, `useAgentRuns`, `useEmailDraft` — each subscribes to a Supabase Realtime channel |
 
 ### API Integration
@@ -256,3 +355,7 @@ This means changing your ICP criteria or outreach tone takes effect on the next 
 **Connection-based auth (no Supabase Auth).** Each Pipedrive OAuth flow creates a `connections` row. The frontend stores the `connectionId` in localStorage and sends it as `X-Connection-Id` on every request. This is simple but means auth is tied to the browser — no multi-device sessions. Suitable for an internal/demo tool.
 
 **Org memory caching.** Research results are cached for 7 days in `org_memory` to avoid redundant web searches. If the same organization appears in multiple leads, the cached research is reused. The `checkMemory` node handles this transparently.
+
+**Why a hub?** As PipeAgent grew beyond lead qualification, a hub pattern emerged naturally. Each agent has its own data scope (leads, deals, contacts), pipeline, and workspace, but they share infrastructure: auth, Pipedrive API client, Supabase, and the global context. The hub provides a single entry point and consistent UX across agents.
+
+**Why an agent registry?** The registry (`apps/web/src/agents/registry.ts`) decouples agent metadata from the hub UI. Adding a new agent means: (1) add its metadata to the registry, (2) implement its workspace component, (3) implement its server-side graph. The hub automatically adds it to the sidebar, home grid, and settings. Simulated agents demonstrate the pattern without requiring backend implementation.

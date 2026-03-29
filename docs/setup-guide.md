@@ -32,10 +32,7 @@ Get the Agent Hub running with your own Pipedrive account.
 3. Run the migrations:
 
 ```bash
-psql "$DATABASE_URL" -f supabase/migrations/001_initial.sql
-psql "$DATABASE_URL" -f supabase/migrations/002_business_profiles.sql
-psql "$DATABASE_URL" -f supabase/migrations/003_followup_days.sql
-psql "$DATABASE_URL" -f supabase/migrations/004_agent_hub.sql
+supabase db push
 ```
 
 4. Note your **Project URL**, **anon key**, and **service role key** from Settings → API

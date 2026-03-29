@@ -7,10 +7,13 @@ export async function getCheckpointer(): Promise<PostgresSaver> {
   if (!checkpointer) {
     const connString = process.env.DATABASE_URL;
     if (!connString) throw new Error('Missing DATABASE_URL');
-    // Strip sslmode from URL (we configure SSL via pool options)
-    const cleanConnString = connString.replace(/[?&]sslmode=[^&]*/g, '');
+    const url = new URL(connString);
     const pool = new pg.Pool({
-      connectionString: cleanConnString,
+      host: url.hostname,
+      port: Number(url.port) || 5432,
+      database: url.pathname.slice(1), // remove leading /
+      user: decodeURIComponent(url.username),
+      password: decodeURIComponent(url.password),
       ssl: { rejectUnauthorized: false },
       connectionTimeoutMillis: 30000,
     });

@@ -83,7 +83,7 @@ export function useEmailDraft(runId: string | null) {
       .eq('run_id', runId)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
       .then(({ data }) => setDraft((data as EmailDraftRow) ?? null));
 
     const channel = supabase

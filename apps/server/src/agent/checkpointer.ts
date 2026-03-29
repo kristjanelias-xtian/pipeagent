@@ -12,9 +12,20 @@ export async function getCheckpointer(): Promise<PostgresSaver> {
     const pool = new pg.Pool({
       connectionString: cleanConnString,
       ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 30000,
     });
     checkpointer = new PostgresSaver(pool);
-    await checkpointer.setup();
+    // Retry setup — Supabase free tier may need to wake up
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await checkpointer.setup();
+        break;
+      } catch (err) {
+        console.error(`Checkpointer setup attempt ${attempt + 1} failed:`, err);
+        if (attempt === 2) throw err;
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
   }
   return checkpointer;
 }

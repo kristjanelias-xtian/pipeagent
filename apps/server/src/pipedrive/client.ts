@@ -1,4 +1,4 @@
-import type { PipedriveLead, PipedrivePerson, PipedriveOrganization } from '@pipeagent/shared';
+import type { PipedriveLead, PipedrivePerson, PipedriveOrganization, PipedriveDeal, PipedriveActivity, PipedriveNote } from '@pipeagent/shared';
 import type { PipedriveApiResponse, PipedriveLeadLabel } from './types.js';
 
 export class PipedriveClient {
@@ -132,5 +132,38 @@ export class PipedriveClient {
         ).toString()
       : '';
     return this.request<PipedriveLead[]>(`/leads${query}`);
+  }
+
+  private get<T>(path: string, params?: Record<string, unknown>): Promise<T> {
+    const query = params
+      ? '?' + new URLSearchParams(
+          Object.entries(params).map(([k, v]) => [k, String(v)])
+        ).toString()
+      : '';
+    return this.request<T>(`${path}${query}`);
+  }
+
+  async getDeals(params?: { limit?: number; start?: number; status?: string }): Promise<PipedriveDeal[]> {
+    return this.get<PipedriveDeal[]>('/deals', params as Record<string, unknown> | undefined);
+  }
+
+  async getDeal(id: number): Promise<PipedriveDeal> {
+    return this.get<PipedriveDeal>(`/deals/${id}`);
+  }
+
+  async getDealActivities(dealId: number): Promise<PipedriveActivity[]> {
+    return this.get<PipedriveActivity[]>(`/deals/${dealId}/activities`);
+  }
+
+  async getDealParticipants(dealId: number): Promise<Array<{ person_id: number; primary_flag: boolean }>> {
+    return this.get<Array<{ person_id: number; primary_flag: boolean }>>(`/deals/${dealId}/participants`);
+  }
+
+  async getDealNotes(dealId: number): Promise<PipedriveNote[]> {
+    return this.get<PipedriveNote[]>(`/deals/${dealId}/notes`, { sort: 'add_time DESC', limit: 20 });
+  }
+
+  async getStages(pipelineId?: number): Promise<Array<{ id: number; name: string; order_nr: number; pipeline_id: number }>> {
+    return this.get<Array<{ id: number; name: string; order_nr: number; pipeline_id: number }>>('/stages', pipelineId ? { pipeline_id: pipelineId } : undefined);
   }
 }

@@ -106,10 +106,7 @@ export default function App() {
 
         {/* Center: Inspector */}
         <div className="flex-1 border-r border-gray-800 min-w-0">
-          <AgentInspector
-            logs={logs}
-            graphState={selectedRun?.graph_state ?? null}
-          />
+          <AgentInspector logs={logs} />
         </div>
 
         {/* Right: Chat */}

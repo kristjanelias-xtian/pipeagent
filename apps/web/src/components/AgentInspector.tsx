@@ -3,7 +3,6 @@ import type { ActivityLogRow } from '@pipeagent/shared';
 
 interface AgentInspectorProps {
   logs: ActivityLogRow[];
-  graphState: Record<string, unknown> | null;
 }
 
 const nodeIcons: Record<string, string> = {
@@ -141,30 +140,14 @@ function LogEntry({ log }: { log: ActivityLogRow }) {
   );
 }
 
-export function AgentInspector({ logs, graphState }: AgentInspectorProps) {
-  const [showState, setShowState] = useState(false);
-
+export function AgentInspector({ logs }: AgentInspectorProps) {
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+      <div className="p-4 border-b border-gray-800">
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
           Agent Inspector
         </h2>
-        <button
-          onClick={() => setShowState(!showState)}
-          className="text-xs text-indigo-400 hover:text-indigo-300"
-        >
-          {showState ? 'Hide' : 'Show'} Graph State
-        </button>
       </div>
-
-      {showState && graphState && (
-        <div className="p-3 border-b border-gray-800 bg-gray-900/50">
-          <pre className="text-xs text-gray-400 overflow-x-auto max-h-40">
-            {JSON.stringify(graphState, null, 2)}
-          </pre>
-        </div>
-      )}
 
       <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
         {logs.length === 0 && (

@@ -105,7 +105,7 @@ Use LangGraph compiled graphs. The handler is invoked with deal/lead context + m
 
 ### Simulated Agents
 
-Return pre-built realistic responses from JSON fixtures after a brief delay (1-2 seconds). Each has a full workspace UI that's visually indistinguishable from real agents. Swapping to real: change `status` to `"active"` and provide a LangGraph handler.
+Return pre-built realistic responses from JSON fixtures after a brief delay (1-2 seconds). Each has a full workspace UI that's visually indistinguishable from real agents. Simulated agents also write mock entries to `activity_logs` on startup so the home screen feed shows realistic cross-agent activity. Swapping to real: change `status` to `"active"` and provide a LangGraph handler.
 
 ## Context Configuration (CLAUDE.md-style Inheritance)
 

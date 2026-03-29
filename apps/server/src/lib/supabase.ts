@@ -13,3 +13,7 @@ export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
     persistSession: false,
   },
 });
+
+export function getSupabase() {
+  return supabase;
+}

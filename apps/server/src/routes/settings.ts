@@ -80,7 +80,7 @@ settings.post('/register-webhook', async (c) => {
     const client = await getClientForConnection(connectionId);
     const result = await client.createWebhook({
       subscription_url: `${webhookUrl}/webhooks/pipedrive`,
-      event_action: 'added',
+      event_action: 'create',
       event_object: 'lead',
     });
     return c.json({ status: 'registered', result });

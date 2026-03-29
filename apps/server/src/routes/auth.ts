@@ -77,7 +77,7 @@ auth.get('/callback', async (c) => {
       try {
         await pdClient.createWebhook({
           subscription_url: `${webhookUrl}/webhooks/pipedrive`,
-          event_action: 'added',
+          event_action: 'create',
           event_object: 'lead',
         });
         console.log(`Webhook registered: ${webhookUrl}/webhooks/pipedrive`);

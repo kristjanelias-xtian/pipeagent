@@ -10,7 +10,7 @@ webhooks.post('/pipedrive', async (c) => {
   const payload = (await c.req.json()) as PipedriveWebhookPayload;
 
   // Only handle lead.added events
-  if (payload.meta.object !== 'lead' || payload.meta.action !== 'added') {
+  if (payload.meta.object !== 'lead' || (payload.meta.action !== 'added' && payload.meta.action !== 'create')) {
     return c.json({ status: 'ignored', reason: `${payload.meta.action}.${payload.meta.object}` });
   }
 

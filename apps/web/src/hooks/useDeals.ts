@@ -10,7 +10,7 @@ export function useDeals() {
     const res = await apiFetch('/deals');
     if (res.ok) {
       const data = await res.json();
-      setDeals(Array.isArray(data) ? data : data.deals || []);
+      setDeals(Array.isArray(data) ? data : data?.deals ?? []);
     }
     setLoading(false);
   };

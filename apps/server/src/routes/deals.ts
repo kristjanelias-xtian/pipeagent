@@ -11,7 +11,7 @@ deals.get('/', async (c) => {
   const connectionId = c.get('connectionId');
   const client = await getClientForConnection(connectionId);
   const data = await client.getDeals({ limit: 50 });
-  return c.json(data);
+  return c.json(data ?? []);
 });
 
 // POST /deals/:dealId/analyze — trigger analysis (background)

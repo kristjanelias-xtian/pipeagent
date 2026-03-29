@@ -4,6 +4,7 @@ import { HubShell } from './components/HubShell';
 import { LoginPage } from './pages/LoginPage';
 import { Home } from './pages/Home';
 import { LeadQualificationWorkspace } from './agents/lead-qualification/Workspace';
+import { DealCoachWorkspace } from './agents/deal-coach/Workspace';
 
 export default function App() {
   const { user, loading, login } = useConnection();
@@ -26,6 +27,7 @@ export default function App() {
             <Route index element={<Home />} />
             {/* Agent workspace routes */}
             <Route path="agent/lead-qualification" element={<LeadQualificationWorkspace />} />
+            <Route path="agent/deal-coach" element={<DealCoachWorkspace />} />
             <Route
               path="agent/*"
               element={

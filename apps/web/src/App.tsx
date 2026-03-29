@@ -3,6 +3,7 @@ import { useConnection } from './hooks/useConnection';
 import { HubShell } from './components/HubShell';
 import { LoginPage } from './pages/LoginPage';
 import { Home } from './pages/Home';
+import { LeadQualificationWorkspace } from './agents/lead-qualification/Workspace';
 
 export default function App() {
   const { user, loading, login } = useConnection();
@@ -23,7 +24,8 @@ export default function App() {
         ) : (
           <Route element={<HubShell user={user} />}>
             <Route index element={<Home />} />
-            {/* Agent workspace routes will be added as workspaces are built */}
+            {/* Agent workspace routes */}
+            <Route path="agent/lead-qualification" element={<LeadQualificationWorkspace />} />
             <Route
               path="agent/*"
               element={

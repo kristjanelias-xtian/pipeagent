@@ -14,6 +14,11 @@ const nodeIcons: Record<string, string> = {
   writeBack: '✏️',
   outreach: '📧',
   complete: '✅',
+  // Deal Coach nodes
+  fetchDealContext: '📥',
+  analyzeSignals: '🔍',
+  scoreHealth: '📊',
+  generateActions: '🎯',
 };
 
 const nodeLabels: Record<string, string> = {
@@ -24,6 +29,11 @@ const nodeLabels: Record<string, string> = {
   scoring: 'Scoring',
   writeBack: 'Write Back',
   outreach: 'Outreach',
+  // Deal Coach nodes
+  fetchDealContext: 'Fetch Deal Context',
+  analyzeSignals: 'Analyze Signals',
+  scoreHealth: 'Score Health',
+  generateActions: 'Generate Actions',
 };
 
 const eventLabels: Record<string, string> = {

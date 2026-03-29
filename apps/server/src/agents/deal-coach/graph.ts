@@ -2,7 +2,7 @@ import { StateGraph, START, END } from '@langchain/langgraph';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { DealCoachState, type DealCoachStateType } from './state.js';
 import { fetchDealContext, analyzeSignals, scoreHealth, generateActions } from './nodes.js';
-import { createRun, updateRunStatus } from '../../agent/logger.js';
+import { updateRunStatus } from '../../agent/logger.js';
 import { getSupabase } from '../../lib/supabase.js';
 
 const AGENT_ID = 'deal-coach';
@@ -23,13 +23,9 @@ const compiledGraph = workflow.compile();
 export async function runDealAnalysis(input: {
   connectionId: string;
   dealId: number;
+  runId: string;
 }): Promise<DealCoachStateType> {
-  const runId = await createRun({
-    connection_id: input.connectionId,
-    lead_id: String(input.dealId),
-    trigger: 'manual',
-    agent_id: AGENT_ID,
-  });
+  const runId = input.runId;
 
   await updateRunStatus(runId, 'running');
 

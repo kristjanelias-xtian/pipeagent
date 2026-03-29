@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getClientForConnection } from '../lib/connections.js';
 import { getSupabase } from '../lib/supabase.js';
+import { createRun } from '../agent/logger.js';
 import { runDealAnalysis, chatAboutDeal } from '../agents/deal-coach/graph.js';
 import type { AppEnv } from '../middleware/auth.js';
 
@@ -23,12 +24,19 @@ deals.post('/:dealId/analyze', async (c) => {
     return c.json({ error: 'Invalid dealId' }, 400);
   }
 
-  // Run in background
-  runDealAnalysis({ connectionId, dealId }).catch((err) => {
+  // Create run and start analysis in background
+  const runId = await createRun({
+    connection_id: connectionId,
+    lead_id: String(dealId),
+    trigger: 'manual',
+    agent_id: 'deal-coach',
+  });
+
+  runDealAnalysis({ connectionId, dealId, runId }).catch((err) => {
     console.error(`Deal analysis failed for deal ${dealId}:`, err);
   });
 
-  return c.json({ status: 'started', dealId });
+  return c.json({ status: 'started', dealId, runId });
 });
 
 // GET /deals/:dealId/analysis — get cached analysis

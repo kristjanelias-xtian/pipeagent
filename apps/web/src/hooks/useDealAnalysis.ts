@@ -6,12 +6,15 @@ export function useDealAnalysis(dealId: number | null) {
   const [analysis, setAnalysis] = useState<DealAnalysisRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<DealChatMessageRow[]>([]);
+  const [runId, setRunId] = useState<string | null>(null);
 
   const analyze = useCallback(async () => {
     if (!dealId) return;
     setLoading(true);
     try {
-      await apiFetch(`/deals/${dealId}/analyze`, { method: 'POST' });
+      const startRes = await apiFetch(`/deals/${dealId}/analyze`, { method: 'POST' });
+      const startData = await startRes.json();
+      if (startData.runId) setRunId(startData.runId);
 
       // Poll until result or timeout (60s)
       const start = Date.now();
@@ -76,5 +79,5 @@ export function useDealAnalysis(dealId: number | null) {
     }
   }, [dealId]);
 
-  return { analysis, loading, chatMessages, analyze, sendChat };
+  return { analysis, loading, chatMessages, analyze, sendChat, runId };
 }

@@ -80,13 +80,15 @@ export async function getClientForConnection(
       clientSecret
     );
     access_token = refreshed.access_token;
+    api_domain = refreshed.api_domain;
 
-    // Persist refreshed tokens
+    // Persist refreshed tokens and api_domain
     await supabase
       .from(TABLE)
       .update({
         access_token: refreshed.access_token,
         refresh_token: refreshed.refresh_token,
+        api_domain: refreshed.api_domain,
         updated_at: new Date().toISOString(),
       })
       .eq('id', connectionId);

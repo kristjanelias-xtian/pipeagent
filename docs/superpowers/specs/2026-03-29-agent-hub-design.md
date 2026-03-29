@@ -155,6 +155,66 @@ Clicking the "+" sidebar item opens a page with:
 
 No functionality — purely a vision teaser for the demo.
 
+## Authentication
+
+Pipedrive OAuth is the sole auth mechanism — no separate login system.
+
+### Flow
+
+1. Unauthenticated user hits the hub → sees a **login page** with "Connect with Pipedrive" button
+2. Button initiates Pipedrive OAuth flow (existing `/auth/login` → `/auth/callback`)
+3. On success, server issues a session token (JWT or Supabase session) and stores the Pipedrive access/refresh tokens keyed to the user's Pipedrive `user_id`
+4. All subsequent API calls require a valid session — server middleware rejects unauthenticated requests
+5. Frontend stores the session token and includes it in all API calls
+6. Session expires → redirect to login page
+
+### Multi-tenant Support
+
+Each Pipedrive user who connects gets their own isolated data:
+- `pipedrive_connections` table stores per-user OAuth tokens and Pipedrive domain
+- All data tables (`agent_runs`, `activity_logs`, `hub_config`, `agent_config`, etc.) are scoped by `connection_id`
+- Supabase RLS policies enforce row-level isolation
+- One deployed instance can serve multiple Pipedrive accounts
+
+### Protected Routes
+
+- `/` and all `/agent/*`, `/settings`, `/build` routes require authentication
+- `/auth/login` and `/auth/callback` are public
+- Server API routes check session middleware before processing
+
+## Setup Guide for New Users
+
+A `docs/setup-guide.md` file included in the repo that walks any Pipedrive user through connecting their own account. Covers:
+
+### 1. Create a Pipedrive Custom App
+- Go to Pipedrive Developer Hub (developer.pipedrive.com)
+- Create a new app → select "Custom App"
+- Set OAuth redirect URI to the deployed callback URL
+- Note the Client ID and Client Secret
+- Required scopes: leads, deals, contacts, activities, users (read + write)
+
+### 2. Set Up Supabase
+- Create a Supabase project (free tier works)
+- Run the migration SQL to create tables
+- Note the project URL, anon key, and service role key
+
+### 3. Configure Environment
+- Copy `.env.example` to `.env`
+- Fill in Pipedrive Client ID/Secret, Supabase credentials, Anthropic API key
+- Optionally configure Tavily API key for web search
+
+### 4. Deploy or Run Locally
+- Local: `pnpm install && pnpm dev`
+- Deploy: Railway (server) + Cloudflare Pages (web) with env vars configured
+
+### 5. Connect Your Pipedrive
+- Open the hub URL
+- Click "Connect with Pipedrive"
+- Authorize the app in Pipedrive
+- Start using agents
+
+The guide is written for Pipedrive employees who want to try the hub with their own Pipedrive account. It assumes technical competence but not familiarity with the codebase.
+
 ## Routing
 
 React Router with these routes:
@@ -201,3 +261,6 @@ Pipedrive-inspired but with its own identity as "Agent Hub":
 6. Context configuration works — changing global context affects agent behavior
 7. Build Your Own teaser is visible and communicates the vision
 8. The whole thing looks polished enough to demo to Pipedrive leadership
+9. Unauthenticated users see login page, authenticated users see the hub
+10. Multi-tenant: multiple Pipedrive accounts can use the same deployment
+11. Setup guide enables any Pipedrive employee to connect their own account

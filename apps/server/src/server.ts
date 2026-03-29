@@ -26,20 +26,28 @@ app.get('/health', (c) => c.json({ status: 'ok' }));
 app.route('/auth', auth);
 app.route('/webhooks', webhooks);
 
-// Protected API routes
-app.use('/me', authMiddleware);
-app.use('/chat/*', authMiddleware);
-app.use('/seed/*', authMiddleware);
-app.use('/leads/*', authMiddleware);
-app.use('/leads', authMiddleware);
-app.use('/deals/*', authMiddleware);
-app.use('/deals', authMiddleware);
-app.use('/settings/*', authMiddleware);
-app.use('/settings', authMiddleware);
-app.use('/hub-config/*', authMiddleware);
-app.use('/hub-config', authMiddleware);
-app.use('/agent-config/*', authMiddleware);
-app.use('/agent-config', authMiddleware);
+// Auth middleware for all API routes (skips /auth/login, /auth/callback, /health, /webhooks, and static files)
+app.use('*', async (c, next) => {
+  const path = c.req.path;
+  // Skip auth for public routes and static assets
+  if (
+    path === '/health' ||
+    path.startsWith('/auth/') ||
+    path.startsWith('/webhooks') ||
+    path.startsWith('/assets/') ||
+    path.endsWith('.js') ||
+    path.endsWith('.css') ||
+    path.endsWith('.html') ||
+    path.endsWith('.ico') ||
+    path.endsWith('.png') ||
+    path.endsWith('.svg') ||
+    path.endsWith('.woff2') ||
+    path === '/'
+  ) {
+    return next();
+  }
+  return authMiddleware(c, next);
+});
 
 // /me endpoint (was /auth/me but needs auth middleware)
 app.get('/me', async (c) => {

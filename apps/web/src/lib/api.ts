@@ -24,9 +24,9 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     ...options,
     headers,
   });
-  if (res.status === 401) {
+  if (res.status === 401 && path !== '/me') {
     clearAuth();
-    window.location.href = '/';
+    window.location.reload();
   }
   return res;
 }

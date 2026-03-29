@@ -1,0 +1,119 @@
+// --- Pipedrive entities ---
+
+export interface PipedriveConnection {
+  id: string;
+  pipedrive_user_id: number;
+  pipedrive_company_id: number;
+  api_domain: string;
+  access_token: string;
+  refresh_token: string;
+  scopes: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PipedriveLead {
+  id: string;
+  title: string;
+  person_id: number | null;
+  organization_id: number | null;
+  value: { amount: number; currency: string } | null;
+  label_ids: string[];
+  source_name: string | null;
+}
+
+export interface PipedrivePerson {
+  id: number;
+  name: string;
+  email: { value: string; primary: boolean }[];
+  phone: { value: string; primary: boolean }[];
+  org_id: number | null;
+}
+
+export interface PipedriveOrganization {
+  id: number;
+  name: string;
+  address: string | null;
+  cc_email: string | null;
+}
+
+// --- Agent state ---
+
+export interface ResearchData {
+  company_description: string;
+  employee_count: number | null;
+  industry: string | null;
+  funding_stage: string | null;
+  tech_stack: string[];
+  recent_news: string[];
+  website_url: string | null;
+  raw_summary: string;
+}
+
+export interface ScoringResult {
+  overall_score: number;
+  confidence: number;
+  criteria: {
+    name: string;
+    score: number;
+    max_score: number;
+    reasoning: string;
+  }[];
+  recommendation: string;
+}
+
+export type LeadLabel = 'hot' | 'warm' | 'cold';
+
+export interface EmailDraft {
+  subject: string;
+  body: string;
+}
+
+// --- Database rows ---
+
+export type AgentRunTrigger = 'webhook' | 'chat' | 'manual';
+export type AgentRunStatus = 'running' | 'paused' | 'completed' | 'failed';
+export type EmailDraftStatus = 'pending' | 'sent' | 'discarded' | 'edited';
+
+export interface AgentRunRow {
+  id: string;
+  connection_id: string;
+  lead_id: string;
+  trigger: AgentRunTrigger;
+  status: AgentRunStatus;
+  graph_state: Record<string, unknown> | null;
+  score: number | null;
+  label: LeadLabel | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActivityLogRow {
+  id: string;
+  run_id: string;
+  node_name: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface OrgMemoryRow {
+  id: string;
+  connection_id: string;
+  pipedrive_org_id: number;
+  org_name: string;
+  research_data: ResearchData;
+  last_researched_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmailDraftRow {
+  id: string;
+  run_id: string;
+  subject: string;
+  body: string;
+  status: EmailDraftStatus;
+  created_at: string;
+  updated_at: string;
+}

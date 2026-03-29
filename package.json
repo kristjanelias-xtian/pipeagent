@@ -1,0 +1,11 @@
+{
+  "name": "pipeagent",
+  "private": true,
+  "scripts": {
+    "dev:server": "pnpm --filter @pipeagent/server dev",
+    "dev:web": "pnpm --filter @pipeagent/web dev",
+    "dev": "pnpm run --parallel dev:server dev:web",
+    "build": "pnpm run --filter @pipeagent/shared build && pnpm run --parallel --filter @pipeagent/server build --filter @pipeagent/web build",
+    "seed": "pnpm --filter @pipeagent/server seed"
+  }
+}

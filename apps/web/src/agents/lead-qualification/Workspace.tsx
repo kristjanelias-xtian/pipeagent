@@ -44,7 +44,7 @@ export function LeadQualificationWorkspace() {
   const handleGenerateLeads = async () => {
     setGenerating(true);
     try {
-      await apiFetch('/leads/generate', { method: 'POST' });
+      await apiFetch('/seed/generate', { method: 'POST' });
       await refetchLeads();
     } catch (err) {
       console.error('Failed to generate leads:', err);

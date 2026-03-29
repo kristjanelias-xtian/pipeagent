@@ -27,7 +27,7 @@ app.route('/auth', auth);
 app.route('/webhooks', webhooks);
 
 // Protected API routes
-app.use('/auth/me', authMiddleware);
+app.use('/me', authMiddleware);
 app.use('/chat/*', authMiddleware);
 app.use('/seed/*', authMiddleware);
 app.use('/leads/*', authMiddleware);
@@ -40,6 +40,17 @@ app.use('/hub-config/*', authMiddleware);
 app.use('/hub-config', authMiddleware);
 app.use('/agent-config/*', authMiddleware);
 app.use('/agent-config', authMiddleware);
+
+// /me endpoint (was /auth/me but needs auth middleware)
+app.get('/me', async (c) => {
+  const connectionId = c.get('connectionId');
+  if (!connectionId) return c.json({ error: 'Unauthorized' }, 401);
+  const { getConnection } = await import('./lib/connections.js');
+  const connection = await getConnection(connectionId);
+  if (!connection) return c.json({ error: 'Connection not found' }, 404);
+  const { access_token: _at, refresh_token: _rt, ...safeConnection } = connection;
+  return c.json(safeConnection);
+});
 
 app.route('/chat', chat);
 app.route('/seed', seed);

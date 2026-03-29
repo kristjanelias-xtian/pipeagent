@@ -102,23 +102,6 @@ auth.get('/callback', async (c) => {
   }
 });
 
-auth.get('/me', async (c) => {
-  const connectionId = c.get('connectionId');
-
-  if (!connectionId) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  const connection = await getConnection(connectionId);
-
-  if (!connection) {
-    return c.json({ error: 'Connection not found' }, 404);
-  }
-
-  // Return connection info without tokens
-  const { access_token: _at, refresh_token: _rt, ...safeConnection } = connection;
-
-  return c.json(safeConnection);
-});
+// /auth/me is mounted separately in server.ts (needs auth middleware)
 
 export { auth };

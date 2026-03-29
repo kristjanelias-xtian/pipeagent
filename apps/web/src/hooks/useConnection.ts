@@ -29,7 +29,7 @@ export function useConnection() {
       setLoading(false);
       return;
     }
-    apiFetch('/auth/me')
+    apiFetch('/me')
       .then((res) => {
         if (!res.ok) throw new Error('Not authenticated');
         return res.json();

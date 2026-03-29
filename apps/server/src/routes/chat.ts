@@ -7,8 +7,7 @@ const chat = new Hono();
 
 // Trigger a chat-based agent run (skips if lead already has a completed/paused/running run)
 chat.post('/message', async (c) => {
-  const connectionId = c.req.header('X-Connection-Id');
-  if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
+  const connectionId = c.get('connectionId');
 
   const { leadId, message } = (await c.req.json()) as {
     leadId: string;
@@ -62,8 +61,7 @@ chat.post('/message', async (c) => {
 
 // Force a new agent run (requalify), always creates a new run
 chat.post('/run', async (c) => {
-  const connectionId = c.req.header('X-Connection-Id');
-  if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
+  const connectionId = c.get('connectionId');
 
   const { leadId } = (await c.req.json()) as { leadId: string };
 
@@ -92,8 +90,7 @@ chat.post('/run', async (c) => {
 
 // Resume a paused run (HITL response)
 chat.post('/resume', async (c) => {
-  const connectionId = c.req.header('X-Connection-Id');
-  if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
+  const connectionId = c.get('connectionId');
 
   const { runId, action, editedEmail } = (await c.req.json()) as {
     runId: string;
@@ -132,8 +129,7 @@ chat.post('/resume', async (c) => {
 
 // Get runs for a lead
 chat.get('/runs/:leadId', async (c) => {
-  const connectionId = c.req.header('X-Connection-Id');
-  if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
+  const connectionId = c.get('connectionId');
 
   const leadId = c.req.param('leadId');
   const { data } = await getSupabase()

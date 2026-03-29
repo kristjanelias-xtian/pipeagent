@@ -14,6 +14,7 @@ import chat from './routes/chat.js';
 import seed from './routes/seed.js';
 import leads from './routes/leads.js';
 import settings from './routes/settings.js';
+import { authMiddleware } from './middleware/auth.js';
 
 const app = new Hono();
 
@@ -21,6 +22,9 @@ app.use('*', cors());
 app.get('/health', (c) => c.json({ status: 'ok' }));
 app.route('/auth', auth);
 app.route('/webhooks', webhooks);
+
+app.use('/*', authMiddleware);
+
 app.route('/chat', chat);
 app.route('/seed', seed);
 app.route('/leads', leads);

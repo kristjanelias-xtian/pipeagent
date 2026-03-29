@@ -5,8 +5,7 @@ import { generateLeads } from '../seed/generator.js';
 const seed = new Hono();
 
 seed.post('/generate', async (c) => {
-  const connectionId = c.req.header('X-Connection-Id');
-  if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
+  const connectionId = c.get('connectionId');
 
   const client = await getClientForConnection(connectionId);
   const result = await generateLeads(client);

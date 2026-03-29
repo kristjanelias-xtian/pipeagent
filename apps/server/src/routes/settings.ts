@@ -13,8 +13,7 @@ const DEFAULT_ICP_CRITERIA: IcpCriterion[] = [
 ];
 
 settings.get('/', async (c) => {
-  const connectionId = c.req.header('X-Connection-Id');
-  if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
+  const connectionId = c.get('connectionId');
 
   const { data } = await getSupabase()
     .from('business_profiles')
@@ -44,8 +43,7 @@ settings.get('/', async (c) => {
 });
 
 settings.put('/', async (c) => {
-  const connectionId = c.req.header('X-Connection-Id');
-  if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
+  const connectionId = c.get('connectionId');
 
   const body = await c.req.json();
   const { business_description, value_proposition, icp_criteria, outreach_tone, followup_days } = body;
@@ -72,8 +70,7 @@ settings.put('/', async (c) => {
 
 // Register Pipedrive webhook for lead.added
 settings.post('/register-webhook', async (c) => {
-  const connectionId = c.req.header('X-Connection-Id');
-  if (!connectionId) return c.json({ error: 'Missing X-Connection-Id' }, 401);
+  const connectionId = c.get('connectionId');
 
   const webhookUrl = process.env.WEBHOOK_URL;
   if (!webhookUrl) return c.json({ error: 'WEBHOOK_URL not configured' }, 500);

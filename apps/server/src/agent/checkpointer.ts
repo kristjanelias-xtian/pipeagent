@@ -5,16 +5,12 @@ let checkpointer: PostgresSaver | null = null;
 
 export async function getCheckpointer(): Promise<PostgresSaver> {
   if (!checkpointer) {
-    const connString = process.env.DATABASE_URL;
-    if (!connString) throw new Error('Missing DATABASE_URL');
-    // Parse postgresql:// URL using http:// trick (URL doesn't handle pg scheme)
-    const url = new URL(connString.replace(/^postgresql:\/\//, 'http://'));
     const pool = new pg.Pool({
-      host: url.hostname,
-      port: Number(url.port) || 5432,
-      database: url.pathname.slice(1),
-      user: decodeURIComponent(url.username),
-      password: decodeURIComponent(url.password),
+      host: process.env.PG_HOST || 'aws-1-eu-west-1.pooler.supabase.com',
+      port: Number(process.env.PG_PORT) || 5432,
+      database: process.env.PG_DATABASE || 'postgres',
+      user: process.env.PG_USER || 'postgres',
+      password: process.env.PG_PASSWORD || '',
       ssl: { rejectUnauthorized: false },
       connectionTimeoutMillis: 30000,
     });

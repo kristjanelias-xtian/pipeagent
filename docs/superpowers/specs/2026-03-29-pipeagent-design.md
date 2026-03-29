@@ -124,7 +124,7 @@ The LangGraph orchestrator is a StateGraph with the following flow:
 |---|---|---|
 | id | uuid, PK | |
 | connection_id | FK → connections | |
-| lead_id | int | Pipedrive lead ID |
+| lead_id | text | Pipedrive lead ID (UUID string) |
 | trigger | text | "webhook", "chat", "manual" |
 | status | text | "running", "paused", "completed", "failed" |
 | graph_state | jsonb | Current LangGraph state snapshot |

@@ -1,6 +1,6 @@
 # PipeAgent
 
-AI-powered lead qualification agent for Pipedrive CRM. When a lead is added — via webhook or manual trigger — PipeAgent runs a multi-step agentic workflow: fetches CRM context, researches the company via web search, scores against your ICP criteria, updates the lead label in Pipedrive, and drafts a personalized outreach email with human-in-the-loop review before sending.
+AI-powered agent hub for Pipedrive CRM. PipeAgent hosts a registry of specialized agents that automate different parts of your sales workflow. Currently ships with two active agents — **Lead Qualification** (auto-score leads against ICP criteria with outreach drafting) and **Deal Coach** (analyze deal health, surface risk signals, suggest next actions) — plus four simulated agents demonstrating the extensibility pattern.
 
 ## Architecture
 
@@ -8,20 +8,20 @@ AI-powered lead qualification agent for Pipedrive CRM. When a lead is added — 
 ┌──────────┐    webhook/manual     ┌──────────────────────────────────────────┐
 │ Pipedrive├──────────────────────►│           Hono Server (port 3001)        │
 │   CRM    │◄──────────────────────┤                                          │
-└──────────┘   labels, notes       │  ┌────────────────────────────────────┐  │
-                                   │  │     LangGraph Agent Pipeline       │  │
-┌──────────┐   realtime +          │  │                                    │  │
-│ Supabase │◄─────────────────────►│  │  fetchContext → checkMemory        │  │
-│ Postgres │   checkpointing       │  │    → research → scoring            │  │
-│ Realtime │                       │  │    → writeBack → outreach          │  │
-└────┬─────┘                       │  │    → hitlReview → logActivity      │  │
-     │                             │  └────────────────────────────────────┘  │
-     │ subscriptions               │                                          │
-     │                             │  Static file serving (production)        │
-     ▼                             └──────────────┬───────────────────────────┘
-┌──────────┐    API calls                         │
-│  React   │◄─────────────────────────────────────┘
-│ Frontend │   X-Connection-Id header
+└──────────┘  labels, notes, deals │  ┌────────────────────────────────────┐  │
+                                   │  │  Lead Qualification (LangGraph)    │  │
+┌──────────┐   realtime +          │  │  fetchContext → research → score   │  │
+│ Supabase │◄─────────────────────►│  │  → writeBack → outreach → HITL    │  │
+│ Postgres │   checkpointing       │  ├────────────────────────────────────┤  │
+│ Realtime │                       │  │  Deal Coach (LangGraph)            │  │
+└────┬─────┘                       │  │  fetchDeal → signals → score       │  │
+     │                             │  │  → actions + chat                  │  │
+     │ subscriptions               │  └────────────────────────────────────┘  │
+     │                             │                                          │
+     ▼                             │  Hub config, agent registry,             │
+┌──────────┐    API calls          │  static file serving (production)        │
+│  React   │◄──────────────────────└──────────────┬───────────────────────────┘
+│ Hub UI   │   JWT auth                           │
 └──────────┘
 ```
 
@@ -105,6 +105,10 @@ pnpm seed
 | `FRONTEND_URL` | No | Alias for `WEB_URL` |
 | `PORT` | No | Server port (default: `3001`) |
 | `NODE_TLS_REJECT_UNAUTHORIZED` | No | Set to `0` for Supabase pooler SSL |
+| **Auth** | | |
+| `JWT_SECRET` | Yes | Secret for signing JWT tokens |
+| **Optional** | | |
+| `TAVILY_API_KEY` | No | Tavily API key (enhances web search) |
 
 ### Web (`apps/web/.env`)
 
@@ -119,36 +123,44 @@ pnpm seed
 ```
 pipeagent/
 ├── apps/
-│   ├── server/                     # Hono HTTP server + LangGraph agent
+│   ├── server/                     # Hono HTTP server + agent pipelines
 │   │   ├── src/
 │   │   │   ├── server.ts           # Entry point, route mounting, static serving
-│   │   │   ├── agent/
+│   │   │   ├── middleware/         # JWT auth middleware
+│   │   │   ├── agent/              # Lead Qualification agent
 │   │   │   │   ├── graph.ts        # LangGraph StateGraph definition
 │   │   │   │   ├── state.ts        # Agent state (Annotation system)
 │   │   │   │   ├── checkpointer.ts # PostgreSQL checkpointer (PG_* env vars)
 │   │   │   │   ├── logger.ts       # Activity logging to Supabase
 │   │   │   │   ├── nodes/          # Graph node implementations
 │   │   │   │   └── subagents/      # Research, scoring, outreach sub-agents
+│   │   │   ├── agents/
+│   │   │   │   └── deal-coach/     # Deal Coach agent (graph, nodes, state)
 │   │   │   ├── pipedrive/
 │   │   │   │   ├── client.ts       # Pipedrive API v1 wrapper
 │   │   │   │   └── oauth.ts        # OAuth token exchange + refresh
-│   │   │   ├── routes/             # auth, chat, leads, settings, seed, webhooks
+│   │   │   ├── routes/             # auth, chat, leads, deals, settings, hub/agent config
 │   │   │   ├── lib/                # Supabase client, connection helpers
 │   │   │   ├── memory/             # Org research cache (7-day TTL)
 │   │   │   └── seed/               # Test data generation
 │   │   └── Dockerfile              # Multi-stage production build
 │   │
-│   └── web/                        # React 19 SPA
+│   └── web/                        # React 19 SPA (hub UI)
 │       └── src/
-│           ├── components/         # LeadsList, AgentInspector, ChatPanel, etc.
-│           ├── hooks/              # useConnection, useLeads, useSupabaseRealtime
+│           ├── components/         # HubShell, TopBar, Sidebar
+│           ├── pages/              # Home, Settings, BuildYourOwn, LoginPage
+│           ├── agents/             # Per-agent workspaces + registry
+│           │   ├── registry.ts     # Agent metadata registry
+│           │   ├── lead-qualification/  # LeadsList, AgentInspector, ChatPanel
+│           │   └── deal-coach/     # DealList, DealAnalysis, DealChat
+│           ├── hooks/              # useConnection, useLeads, useDeals, useDealAnalysis
 │           └── lib/                # API client, Supabase client
 │
 ├── packages/
 │   └── shared/                     # TypeScript types (CRM, agent state, DB rows)
 │
 ├── supabase/
-│   └── migrations/                 # 001_initial.sql, 002_business_profiles.sql
+│   └── migrations/                 # 001-004: initial, profiles, followup, agent hub
 │
 ├── .env.example
 ├── CLAUDE.md                       # AI coding assistant context
@@ -173,28 +185,38 @@ The single Railway service serves both the API and the built frontend.
 
 1. Go to **Pipedrive Developer Hub** → Create a **Custom App**
 2. Set OAuth redirect URI to `https://<your-domain>/auth/callback`
-3. Required scopes: `leads:full`, `contacts:full`, `base` (at minimum)
+3. Required scopes: `leads:full`, `deals:full`, `persons:full`, `organizations:full`, `activities:read`, `users:read`, `notes:full`
 4. Copy Client ID and Client Secret to your environment variables
 5. Once authenticated, the webhook for `lead.added` is registered automatically during the OAuth callback
 
 ## API Endpoints
 
-All routes except auth and webhooks require the `X-Connection-Id` header.
+All routes except `/auth` and `/webhooks` require JWT authentication (`Authorization: Bearer <token>`).
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Health check |
+| **Auth** | | |
 | `GET` | `/auth/login` | Initiate Pipedrive OAuth |
 | `GET` | `/auth/callback` | OAuth callback + webhook registration |
-| `GET` | `/auth/me` | Current user info |
+| `GET` | `/me` | Current user/connection info |
 | `POST` | `/webhooks/pipedrive` | Pipedrive webhook handler (`lead.added`) |
+| **Lead Qualification** | | |
 | `POST` | `/chat/message` | Trigger agent run (skips if existing run) |
 | `POST` | `/chat/run` | Force new agent run (requalify) |
 | `POST` | `/chat/resume` | Resume paused run with HITL response |
 | `GET` | `/chat/runs/:leadId` | List runs for a lead |
 | `GET` | `/chat/logs/:runId` | Activity logs for a run |
 | `GET` | `/leads` | Proxy to Pipedrive leads API |
-| `GET` | `/settings` | Get business profile |
-| `PUT` | `/settings` | Update business profile |
+| **Deal Coach** | | |
+| `POST` | `/deals/:dealId/analyze` | Trigger deal analysis (background) |
+| `GET` | `/deals/:dealId/analysis` | Get cached analysis |
+| `POST` | `/deals/:dealId/chat` | Send coaching question |
+| `GET` | `/deals/:dealId/chat` | Get chat history |
+| `GET` | `/deals` | List deals from Pipedrive |
+| **Configuration** | | |
+| `GET/PUT` | `/settings` | Business profile (ICP criteria, outreach tone) |
+| `GET/PUT` | `/hub-config` | Global context (shared across all agents) |
+| `GET/PUT` | `/agent-config/:agentId` | Per-agent local context |
 | `POST` | `/settings/register-webhook` | Manually register Pipedrive webhook |
 | `POST` | `/seed/generate` | Generate test leads (1-10) |

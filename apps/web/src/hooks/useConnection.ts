@@ -43,8 +43,7 @@ export function useConnection() {
   }, [authenticated]);
 
   const login = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    window.location.href = `${apiUrl}/auth/login`;
+    window.location.href = '/auth/login';
   };
 
   const logout = () => {

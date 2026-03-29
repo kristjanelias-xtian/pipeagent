@@ -19,7 +19,8 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${path}`, {
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers,
   });

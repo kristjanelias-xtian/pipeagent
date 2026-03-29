@@ -5,6 +5,10 @@ import { LoginPage } from './pages/LoginPage';
 import { Home } from './pages/Home';
 import { LeadQualificationWorkspace } from './agents/lead-qualification/Workspace';
 import { DealCoachWorkspace } from './agents/deal-coach/Workspace';
+import { MeetingPrepWorkspace } from './agents/meeting-prep/Workspace';
+import { EmailComposerWorkspace } from './agents/email-composer/Workspace';
+import { DataEnrichmentWorkspace } from './agents/data-enrichment/Workspace';
+import { PipelineForecasterWorkspace } from './agents/pipeline-forecaster/Workspace';
 
 export default function App() {
   const { user, loading, login } = useConnection();
@@ -28,6 +32,10 @@ export default function App() {
             {/* Agent workspace routes */}
             <Route path="agent/lead-qualification" element={<LeadQualificationWorkspace />} />
             <Route path="agent/deal-coach" element={<DealCoachWorkspace />} />
+            <Route path="agent/meeting-prep" element={<MeetingPrepWorkspace />} />
+            <Route path="agent/email-composer" element={<EmailComposerWorkspace />} />
+            <Route path="agent/data-enrichment" element={<DataEnrichmentWorkspace />} />
+            <Route path="agent/pipeline-forecaster" element={<PipelineForecasterWorkspace />} />
             <Route
               path="agent/*"
               element={

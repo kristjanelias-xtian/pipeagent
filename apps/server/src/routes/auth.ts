@@ -31,7 +31,7 @@ auth.get('/callback', async (c) => {
   const clientId = process.env.PIPEDRIVE_CLIENT_ID;
   const clientSecret = process.env.PIPEDRIVE_CLIENT_SECRET;
   const redirectUri = process.env.PIPEDRIVE_REDIRECT_URI;
-  const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || process.env.PUBLIC_SERVER_URL || '';
   const webhookUrl = process.env.WEBHOOK_URL;
 
   if (!clientId || !clientSecret || !redirectUri) {

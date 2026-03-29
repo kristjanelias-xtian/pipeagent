@@ -85,6 +85,28 @@ export interface BusinessProfile {
   followup_days: number;
 }
 
+// --- Agent Hub types ---
+
+export type AgentId =
+  | 'lead-qualification'
+  | 'deal-coach'
+  | 'meeting-prep'
+  | 'email-composer'
+  | 'data-enrichment'
+  | 'pipeline-forecaster';
+
+export type AgentStatus = 'active' | 'simulated' | 'coming-soon';
+
+export interface AgentMeta {
+  id: AgentId;
+  name: string;
+  icon: string;
+  description: string;
+  status: AgentStatus;
+  dataScope: 'leads' | 'deals' | 'contacts' | 'pipeline';
+  defaultConfig: string;
+}
+
 // --- Database rows ---
 
 export type AgentRunTrigger = 'webhook' | 'chat' | 'manual';
@@ -95,6 +117,7 @@ export interface AgentRunRow {
   id: string;
   connection_id: string;
   lead_id: string;
+  agent_id: AgentId;
   trigger: AgentRunTrigger;
   status: AgentRunStatus;
   graph_state: Record<string, unknown> | null;
@@ -107,6 +130,7 @@ export interface AgentRunRow {
 export interface ActivityLogRow {
   id: string;
   run_id: string;
+  agent_id: AgentId | null;
   node_name: string;
   event_type: string;
   payload: Record<string, unknown>;
@@ -132,4 +156,111 @@ export interface EmailDraftRow {
   status: EmailDraftStatus;
   created_at: string;
   updated_at: string;
+}
+
+// Deal Coach types
+export interface DealSignal {
+  type: 'positive' | 'negative' | 'warning';
+  text: string;
+}
+
+export interface DealAction {
+  priority: number;
+  title: string;
+  reasoning: string;
+  actionType: 'email' | 'task' | 'meeting' | 'research';
+}
+
+export interface DealAnalysis {
+  healthScore: number;
+  scoreTrend: number;
+  signals: DealSignal[];
+  actions: DealAction[];
+}
+
+// Database row types for new tables
+export interface HubConfigRow {
+  id: string;
+  connection_id: string;
+  global_context: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentConfigRow {
+  id: string;
+  connection_id: string;
+  agent_id: AgentId;
+  local_context: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DealAnalysisRow {
+  id: string;
+  connection_id: string;
+  pipedrive_deal_id: number;
+  health_score: number;
+  signals: DealSignal[];
+  actions: DealAction[];
+  raw_context: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DealChatMessageRow {
+  id: string;
+  connection_id: string;
+  pipedrive_deal_id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
+// Pipedrive Deal type
+export interface PipedriveDeal {
+  id: number;
+  title: string;
+  value: number;
+  currency: string;
+  status: string;
+  stage_id: number;
+  stage_order_nr: number;
+  pipeline_id: number;
+  person_id: number | null;
+  org_id: number | null;
+  user_id: number;
+  add_time: string;
+  update_time: string;
+  stage_change_time: string | null;
+  won_time: string | null;
+  lost_time: string | null;
+  expected_close_date: string | null;
+  label: string | null;
+  probability: number | null;
+}
+
+export interface PipedriveActivity {
+  id: number;
+  type: string;
+  subject: string;
+  done: boolean;
+  due_date: string | null;
+  due_time: string | null;
+  add_time: string;
+  marked_as_done_time: string | null;
+  person_id: number | null;
+  deal_id: number | null;
+  org_id: number | null;
+  note: string | null;
+}
+
+export interface PipedriveNote {
+  id: number;
+  content: string;
+  deal_id: number | null;
+  person_id: number | null;
+  org_id: number | null;
+  add_time: string;
+  update_time: string;
 }

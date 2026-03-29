@@ -7,11 +7,12 @@ export async function getCheckpointer(): Promise<PostgresSaver> {
   if (!checkpointer) {
     const connString = process.env.DATABASE_URL;
     if (!connString) throw new Error('Missing DATABASE_URL');
-    const url = new URL(connString);
+    // Parse postgresql:// URL using http:// trick (URL doesn't handle pg scheme)
+    const url = new URL(connString.replace(/^postgresql:\/\//, 'http://'));
     const pool = new pg.Pool({
       host: url.hostname,
       port: Number(url.port) || 5432,
-      database: url.pathname.slice(1), // remove leading /
+      database: url.pathname.slice(1),
       user: decodeURIComponent(url.username),
       password: decodeURIComponent(url.password),
       ssl: { rejectUnauthorized: false },

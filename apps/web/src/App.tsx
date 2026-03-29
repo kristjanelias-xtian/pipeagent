@@ -3,6 +3,8 @@ import { useConnection } from './hooks/useConnection';
 import { HubShell } from './components/HubShell';
 import { LoginPage } from './pages/LoginPage';
 import { Home } from './pages/Home';
+import { Settings } from './pages/Settings';
+import { BuildYourOwn } from './pages/BuildYourOwn';
 import { LeadQualificationWorkspace } from './agents/lead-qualification/Workspace';
 import { DealCoachWorkspace } from './agents/deal-coach/Workspace';
 import { MeetingPrepWorkspace } from './agents/meeting-prep/Workspace';
@@ -44,20 +46,8 @@ export default function App() {
                 </div>
               }
             />
-            <Route
-              path="settings"
-              element={
-                <div className="p-6 text-[#6a7178]">Settings coming soon</div>
-              }
-            />
-            <Route
-              path="build"
-              element={
-                <div className="p-6 text-[#6a7178]">
-                  Build Your Own coming soon
-                </div>
-              }
-            />
+            <Route path="settings" element={<Settings />} />
+            <Route path="build" element={<BuildYourOwn />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         )}

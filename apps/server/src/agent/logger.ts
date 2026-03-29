@@ -5,12 +5,14 @@ export async function logActivity(
   nodeName: string,
   eventType: string,
   payload: Record<string, unknown> = {},
+  agentId?: string,
 ): Promise<void> {
   await getSupabase().from('activity_logs').insert({
     run_id: runId,
     node_name: nodeName,
     event_type: eventType,
     payload,
+    agent_id: agentId || null,
   });
 }
 
@@ -29,10 +31,15 @@ export async function createRun(data: {
   connection_id: string;
   lead_id: string;
   trigger: string;
+  agent_id?: string;
 }): Promise<string> {
   const { data: run, error } = await getSupabase()
     .from('agent_runs')
-    .insert(data)
+    .insert({
+      ...data,
+      agent_id: data.agent_id || 'lead-qualification',
+      status: 'pending',
+    })
     .select('id')
     .single();
 

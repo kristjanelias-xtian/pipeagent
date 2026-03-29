@@ -34,7 +34,7 @@ Supabase Postgres    Pipedrive API
 **Railway — Node.js Agent Server**
 - Hono API server
 - LangGraph.js orchestrator with three sub-agents (Research, Scoring, Outreach)
-- Pipedrive webhook receiver
+- Pipedrive webhook receiver (webhooks registered on first OAuth connection per user; cleaned up on token revocation)
 - OAuth token management with automatic refresh
 - Lead seeder (CLI + API endpoint)
 
@@ -54,7 +54,7 @@ The LangGraph orchestrator is a StateGraph with the following flow:
 4. **Research Sub-Agent** — Claude-powered web research on the organization (company website, size, industry, funding, tech stack, recent news)
 5. **Save Research** — write structured findings to `org_memory` table and Pipedrive org custom fields
 6. **Scoring Sub-Agent** — applies ICP criteria to research data, outputs score (1-100), confidence, and reasoning breakdown
-7. **Decision** (conditional edge) — Hot (>70), Warm (40-70), Cold (<40)
+7. **Decision** (conditional edge) — Hot (≥70), Warm (40–69), Cold (<40)
 8. **Write Back to Pipedrive** — update lead label, custom fields (score, reasoning), add note with research summary
 9. **Outreach Sub-Agent** — drafts personalized email based on research and score tier (Cold leads skip this step)
 10. **HITL Interrupt** — graph pauses, email draft appears in dashboard. User can Edit, Send (dummy), or Discard
@@ -64,7 +64,7 @@ The LangGraph orchestrator is a StateGraph with the following flow:
 
 **Research Sub-Agent (sub-graph)**
 - System prompt focused on company research
-- Tools: web search, website fetch/summarize
+- Tools: web search (Tavily API — LangChain-native, free tier available), website fetch/summarize
 - Outputs structured data: employee count, industry, funding stage, tech stack, recent news, company description
 - Claude reasons about what information is relevant and trustworthy
 
@@ -87,7 +87,7 @@ The LangGraph orchestrator is a StateGraph with the following flow:
 - **Sub-graphs** — each sub-agent is a separate compiled graph, composed into the parent
 - **Conditional edges** — routing based on memory freshness, score thresholds, lead tier
 - **Checkpointing** — Postgres checkpointer saves state after every node; agent resumes after crashes
-- **Human-in-the-loop** — `interruptBefore` on the email send step; graph pauses and waits for user action
+- **Human-in-the-loop** — uses LangGraph's `interrupt()` function + `Command({ resume })` pattern in the outreach node; graph pauses, checkpoints, and resumes with the user's edit/send/discard decision passed back as the resume value
 - **Memory** — org research persisted across runs; agent behavior changes over time
 
 ## Auth & Multi-Tenancy
@@ -96,7 +96,7 @@ The LangGraph orchestrator is a StateGraph with the following flow:
 - Registered in Pipedrive Developer Hub as a Custom App (instant, no marketplace approval)
 - Scoped to the Pipedrive company account — works for all colleagues on the same PD instance
 - OAuth flow: "Sign in with Pipedrive" → authorize → redirect back with token
-- Tokens stored in Supabase `connections` table (encrypted)
+- Tokens stored in Supabase `connections` table (protected via service-role-only access; application-level encryption is a stretch goal)
 - Automatic refresh token rotation
 
 **Multi-user scoping:**
@@ -113,8 +113,8 @@ The LangGraph orchestrator is a StateGraph with the following flow:
 | pipedrive_user_id | int | PD user identifier |
 | pipedrive_company_id | int | PD company identifier |
 | api_domain | text | e.g., "xtian.pipedrive.com" |
-| access_token | text, encrypted | OAuth access token |
-| refresh_token | text, encrypted | OAuth refresh token |
+| access_token | text | OAuth access token (service-role access only) |
+| refresh_token | text | OAuth refresh token (service-role access only) |
 | scopes | text[] | Granted OAuth scopes |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
@@ -194,8 +194,8 @@ LangGraph's Postgres checkpointer creates its own internal tables alongside thes
 **Right: Chat Panel**
 - Conversational interface to the agent about the selected lead
 - "Tell me about the Datadog lead" / "Re-score this with stricter criteria" / "Why did you rate budget signals low?"
-- Chat input triggers the LangGraph orchestrator with the user message as input
-- Agent can skip/re-run specific nodes based on the question
+- Each chat message creates a new `agent_run` (trigger: "chat") for the selected lead. The agent receives the user message plus the lead's existing research/score from memory, then decides which nodes to execute (e.g., a "why" question only runs a reasoning step, "re-score" reruns the scoring sub-agent with the existing research)
+- Chat responses stream back via Supabase Realtime, same as the Inspector updates
 
 **Bottom: Email Draft Bar**
 - Appears when agent hits the HITL interrupt (outreach draft ready)
@@ -230,6 +230,7 @@ Generates realistic test leads using real companies with fake contacts.
 | LangGraph.js (`@langchain/langgraph`) | Agent orchestration, sub-graphs, checkpointing |
 | `@langchain/langgraph-checkpoint-postgres` | Persistent checkpointing via Supabase Postgres |
 | `@langchain/anthropic` | Claude as the LLM for all sub-agents |
+| `@langchain/community` (Tavily) | Web search tool for Research sub-agent |
 | Hono | API server on Railway |
 | `@supabase/supabase-js` | Database access + Realtime subscriptions |
 | React + Vite | Dashboard SPA |

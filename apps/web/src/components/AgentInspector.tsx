@@ -107,8 +107,21 @@ function summarizePayload(log: ActivityLogRow): string | null {
   return null;
 }
 
+function truncateDeep(val: unknown, maxLen = 200): unknown {
+  if (typeof val === 'string') {
+    return val.length > maxLen ? val.slice(0, maxLen) + '...' : val;
+  }
+  if (Array.isArray(val)) return val.map((v) => truncateDeep(v, maxLen));
+  if (val && typeof val === 'object') {
+    return Object.fromEntries(
+      Object.entries(val).map(([k, v]) => [k, truncateDeep(v, maxLen)])
+    );
+  }
+  return val;
+}
+
 function formatPayload(payload: Record<string, unknown>): string {
-  // Deep-parse any stringified JSON values (e.g. response_preview)
+  // Deep-parse any stringified JSON values (e.g. response_preview), then truncate long strings
   const cleaned = Object.fromEntries(
     Object.entries(payload).map(([key, val]) => {
       if (typeof val === 'string') {
@@ -120,7 +133,7 @@ function formatPayload(payload: Record<string, unknown>): string {
       return [key, val];
     })
   );
-  return JSON.stringify(cleaned, null, 2);
+  return JSON.stringify(truncateDeep(cleaned), null, 2);
 }
 
 function LogEntry({ log }: { log: ActivityLogRow }) {

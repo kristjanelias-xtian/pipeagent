@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { PipedriveClient } from '../pipedrive/client.js';
 import { generateLeads } from './generator.js';
 
-const count = parseInt(process.argv[2] ?? '10', 10);
 const apiDomain = process.env.PIPEDRIVE_API_DOMAIN;
 const apiToken = process.env.PIPEDRIVE_API_TOKEN;
 
@@ -13,9 +12,9 @@ if (!apiDomain || !apiToken) {
 }
 
 const client = new PipedriveClient(apiDomain, apiToken);
-console.log(`Seeding ${count} leads...`);
-const result = await generateLeads(client, count);
-console.log(`Done: ${result.created} created, ${result.errors.length} errors`);
+console.log('Seeding 2 test leads...');
+const result = await generateLeads(client);
+console.log(`Done: ${result.created} created, ${result.remaining} remaining, ${result.errors.length} errors`);
 if (result.errors.length) {
   console.log('Errors:', result.errors);
 }

@@ -44,10 +44,7 @@ export default function App() {
   const handleGenerateLeads = async () => {
     setGenerating(true);
     try {
-      await apiFetch('/seed/generate', {
-        method: 'POST',
-        body: JSON.stringify({ count: 5 }),
-      });
+      await apiFetch('/seed/generate', { method: 'POST' });
       await refetchLeads();
     } finally {
       setGenerating(false);

@@ -220,3 +220,12 @@ All routes except `/auth` and `/webhooks` require JWT authentication (`Authoriza
 | `GET/PUT` | `/agent-config/:agentId` | Per-agent local context |
 | `POST` | `/settings/register-webhook` | Manually register Pipedrive webhook |
 | `POST` | `/seed/generate` | Generate test leads (1-10) |
+
+## Further reading
+
+Essays and docs in [`docs/`](./docs):
+
+- **[Agents in the CRM](./docs/agents-in-the-crm.md)** — non-technical companion essay. What "agent" actually means in a CRM context, the six jobs in the registry, and an opinionated recommendation for which philosophy fits each job.
+- **[Two ways to build agents that touch your CRM](./docs/two-ways-to-build-crm-agents.md)** — technical comparison between pipeagent (engineered LangGraph pipeline) and [digital-pd-team](https://github.com/kristjanelias-xtian/digital-pd-team) (embodied Claude Code bots in a Telegram group). Architectures, frameworks, state, and where authority over control flow lives.
+- **[Architecture](./docs/architecture.md)** — deeper dive into the server + agent internals.
+- **[Setup guide](./docs/setup-guide.md)** — extended setup walkthrough beyond the Quick Start above.

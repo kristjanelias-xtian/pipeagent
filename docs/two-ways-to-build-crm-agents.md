@@ -7,6 +7,8 @@ The two repos, if you want to follow along:
 - **[pipeagent](https://github.com/kristjanelias-xtian/pipeagent)** — the LangGraph one
 - **[digital-pd-team](https://github.com/kristjanelias-xtian/digital-pd-team)** — the Telegram bots
 
+> **Looking for the non-engineering version?** See **[Agents in the CRM](./agents-in-the-crm.md)** — a standalone companion piece for product and design readers. Same core ideas, zero code, plus an opinionated take on which philosophy fits which CRM job.
+
 ## Project A: the engineered pipeline
 
 **[pipeagent](https://github.com/kristjanelias-xtian/pipeagent)** is a TypeScript monorepo. Hono server, React frontend, Postgres, [LangGraph](https://www.langchain.com/langgraph). Two active agents: Lead Qualification and Deal Coach.
@@ -208,13 +210,13 @@ quadrantChart
     quadrant-2 Prose workflows
     quadrant-3 Compiled pipelines
     quadrant-4 Typed autonomy
-    "pipeagent": [0.22, 0.18]
-    "digital-pd-team": [0.85, 0.82]
-    "Constrained pipelines (BAML, Outlines)": [0.06, 0.08]
-    "LangGraph supervisor": [0.48, 0.25]
-    "Orchestrator-workers": [0.5, 0.35]
-    "CrewAI crews": [0.6, 0.58]
-    "Unsupervised autonomous agent": [0.95, 0.6]
+    "pipeagent": [0.22, 0.18] radius: 14, color: #2563eb, stroke-color: #1e3a8a, stroke-width: 2px
+    "digital-pd-team": [0.85, 0.82] radius: 14, color: #dc2626, stroke-color: #7f1d1d, stroke-width: 2px
+    "Constrained pipelines (BAML, Outlines)": [0.06, 0.08] radius: 5, color: #9ca3af
+    "LangGraph supervisor": [0.48, 0.25] radius: 5, color: #9ca3af
+    "Orchestrator-workers": [0.5, 0.35] radius: 5, color: #9ca3af
+    "CrewAI crews": [0.6, 0.58] radius: 5, color: #9ca3af
+    "Unsupervised autonomous agent": [0.95, 0.6] radius: 5, color: #9ca3af
 ```
 
 Two things this picture makes obvious that the prose alone kind of hides:

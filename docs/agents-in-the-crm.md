@@ -4,12 +4,12 @@
 
 ## Why this document exists
 
-We've been using the word "agent" a lot — in roadmap docs, in investor conversations, in product reviews. It means at least three different things depending on who's saying it. This document tries to fix that, at least for the three of us, by doing two things:
+The word "agent" gets used a lot — in roadmap docs, in investor conversations, in product reviews. It means at least three different things depending on who's saying it. This is a personal attempt to fix that, at least for myself, by doing two things:
 
-1. Giving us a **working definition** of what an agent is (and isn't) in the context of a CRM.
-2. Walking through the **actual jobs** our CRM agents could do, and proposing *which kind of agent* fits each job.
+1. Writing down a **working definition** of what an agent is (and isn't) in the context of a CRM.
+2. Walking through the **actual jobs** a CRM agent could do, and proposing *which kind of agent* fits each job.
 
-It's opinionated on purpose. The goal isn't to be comprehensive — it's to give us enough shared vocabulary to disagree productively and leave the meeting with a decision.
+It's opinionated on purpose. The goal isn't to be comprehensive — it's to give me a concrete claim to argue with (and to share with anyone thinking about the same question).
 
 If you want the engineering deep-dive (architectures, frameworks, code), there's a technical companion piece linked at the bottom. You shouldn't need it to follow this one.
 
@@ -24,21 +24,21 @@ That last clause is the load-bearing one. It's what separates an agent from thin
 - **A chatbot** — answers questions but doesn't act on the CRM.
 - **An LLM behind a button** — generates text only when a human clicks.
 
-An agent, in our sense, is doing *work* — updating deals, drafting emails, researching companies, scheduling follow-ups — and it has *some* room to choose how to do that work. "Some room" can mean a tiny amount (pick one of three branches) or a large amount (figure it out from scratch). That range is what the rest of this document is about.
+An agent, in the sense I mean here, is doing *work* — updating deals, drafting emails, researching companies, scheduling follow-ups — and it has *some* room to choose how to do that work. "Some room" can mean a tiny amount (pick one of three branches) or a large amount (figure it out from scratch). That range is what the rest of this document is about.
 
 Every CRM agent needs two things:
 
 1. **A job** — what work is it doing on behalf of the user?
 2. **A decision surface** — what is it allowed to decide for itself, and what's fixed?
 
-The job is a product question. The decision surface is a philosophy question. We're going to talk about both.
+The job is a product question. The decision surface is a philosophy question. I'm going to talk about both.
 
 ## The jobs worth doing
 
-Our web registry already names six agent roles. They're the concrete jobs this document argues about.
+The pipeagent registry already names six agent roles. They're the concrete jobs this document argues about.
 
 ### 1. Lead Qualification
-Researches and scores incoming leads against our ideal customer profile. Today: a human reads a form, googles the company, and decides whether to pursue. A good agent does the research automatically, scores against criteria we define, and routes to the right person.
+Researches and scores incoming leads against an ideal customer profile. Today: a human reads a form, googles the company, and decides whether to pursue. A good agent does the research automatically, scores against criteria you define, and routes to the right person.
 - **Good output:** a cold lead filtered out in seconds; a hot lead handed off with a brief that reads like a peer wrote it.
 - **Bad output:** scoring noise, false positives, research so shallow the rep has to redo it.
 
@@ -63,15 +63,15 @@ Auto-fills missing fields on contacts and companies. Today: either manual (slow)
 - **Bad output:** plausible-sounding fields that are wrong, with no way to tell which.
 
 ### 6. Pipeline Forecaster
-Scores deal health and predicts close probability across the whole pipeline. Today: a spreadsheet plus a gut call. A good agent produces a forecast our CFO can live with.
+Scores deal health and predicts close probability across the whole pipeline. Today: a spreadsheet plus a gut call. A good agent produces a forecast a CFO can live with.
 - **Good output:** a per-deal probability that tracks reality better than the rep's stage-based guess.
 - **Bad output:** overconfident numbers that swing wildly week-to-week.
 
 These six cover most of the revenue-ops surface area. Notice: they have *very different shapes*. Some are high-volume and repetitive. Some are creative and voice-driven. Some need to be auditable to the decimal place. Some need to be fast and cheap. **This is why one philosophy doesn't fit them all.**
 
-## Two philosophies we've actually built
+## Two philosophies I've actually built
 
-We have two internal prototypes. They sit at roughly opposite corners of the design space, and building both taught us more than either one alone would have.
+I have two prototypes. They sit at roughly opposite corners of the design space, and building both taught me more than either one alone would have.
 
 ### pipeagent — the engineered pipeline
 
@@ -85,7 +85,7 @@ Think of it as **a team you hired**. Three bots — Zeno the sales manager, Lux 
 
 There's no workflow engine. There's no rigid sequence. The coordination layer is a chat group, and the "code" is the job description each bot reads when it wakes up.
 
-It's chaotic in the good sense. It *feels* like managing a team, not running a program. It surprised us with things we didn't design — bots flagging anomalies nobody asked them to check, bots coaching each other through handoffs.
+It's chaotic in the good sense. It *feels* like managing a team, not running a program. It surprised me with things I didn't design — bots flagging anomalies nobody asked them to check, bots coaching each other through handoffs.
 
 ### The one-line contrast
 
@@ -112,7 +112,7 @@ When you pick a philosophy, you're not picking a vibe — you're buying a specif
 
 ## A map of the space
 
-Here's where every option actually sits. The two projects we've built are highlighted; the gray dots are other positions you could stand in.
+Here's where every option actually sits. The two projects I've built are highlighted; the gray dots are other positions you could stand in.
 
 ```mermaid
 quadrantChart
@@ -137,11 +137,11 @@ Two quadrants are where the action is:
 - **Bottom-left — predictable automations.** This is pipeagent. The system does the same thing every time. You trust it because it's bounded, auditable, and cheap. Fits jobs that need *consistency*.
 - **Top-right — hired teammates.** This is digital-pd-team. The system improvises. You trust it because it talks to you in prose and you can override it in the same chat. Fits jobs that need *judgment* and *voice*.
 
-The middle of the map — manager-plus-specialists, role-based crews — is where most of the industry is currently moving. It blends predictability with judgment: a typed manager decides who runs next, the specialists do the job in a bounded way. We haven't built a prototype there yet, but several of the jobs below might land there.
+The middle of the map — manager-plus-specialists, role-based crews — is where most of the industry is currently moving. It blends predictability with judgment: a typed manager decides who runs next, the specialists do the job in a bounded way. I haven't built a prototype there yet, but several of the jobs below might land there.
 
 ## Which philosophy for which job?
 
-Here's our opinionated starting point. **The goal isn't to be right — it's to give the three of us a concrete claim to argue about.**
+Here's my opinionated starting point. **The goal isn't to be right — it's to have a concrete claim to argue with.**
 
 | Job | Recommended philosophy | Why |
 |---|---|---|
@@ -151,23 +151,23 @@ Here's our opinionated starting point. **The goal isn't to be right — it's to 
 | **Meeting Prep** | Engineered *with one judgment step* | Research-heavy but the output shape is stable. The one thing that benefits from improvisation is *what to look up* — a small judgment surface inside a larger pipeline. |
 | **Deal Coach** | Middle ground (manager + specialist) | Structured health scoring (engineered) plus freeform chat with the rep (embodied). This is the clearest case for the middle of the map. |
 | **Email Composer** | Embodied (or strong middle) | Voice matters. Drafts need personality. Iteration *is* the product. This is where "AI smell" kills user trust, and embodied agents — the ones with a real persona — are meaningfully less smelly. |
-| *(not yet in the registry)* **RevOps Teammate** | Embodied | Judgment-heavy, persistent relationships, needs to notice things nobody asked it to check. If we want to *feel* like we have an AI teammate, this is the job to build it for. Strongest candidate for an embodied pilot. |
+| *(not yet in the registry)* **RevOps Teammate** | Embodied | Judgment-heavy, persistent relationships, needs to notice things nobody asked it to check. If you want to *feel* like you have an AI teammate, this is the job to build it for. Strongest candidate for an embodied pilot. |
 
 A few things this table is claiming on purpose:
 
-1. **Most of our roadmap is engineered.** Four of the six existing jobs land in the predictable-automations quadrant. That's a feature, not a failure of imagination. Reliability is our competitive edge for these.
-2. **Deal Coach is the interesting one.** It's where the two philosophies genuinely meet, and it's probably where the clearest user-experience wins are hiding for us this year.
+1. **Most of the registry is engineered.** Four of the six jobs land in the predictable-automations quadrant. That's a feature, not a failure of imagination. Reliability is the edge for these.
+2. **Deal Coach is the interesting one.** It's where the two philosophies genuinely meet, and it's probably where the clearest user-experience wins are hiding.
 3. **Email Composer wants a persona.** The risk there isn't correctness — it's taste. Embodied agents handle taste better, because the voice is baked into the identity instead of squeezed into a prompt parameter.
-4. **The embodied philosophy deserves a pilot, and the right pilot isn't in the current registry.** A "RevOps Teammate" — not a single job, but a continuous presence that notices and nudges — is where embodied agents shine, and it's a shape our current roadmap has nothing for.
+4. **The embodied philosophy deserves a pilot, and the right pilot isn't in the current registry.** A "RevOps Teammate" — not a single job, but a continuous presence that notices and nudges — is where embodied agents shine, and it's a shape the current registry has nothing for.
 
-## What this means for us
+## Open questions I'm still chewing on
 
-Four questions worth a real conversation, not silent answers:
+Four questions I don't have clean answers to yet:
 
-1. **Where do we invest first?** A deep engineered pipeline that ships reliably and becomes table stakes, or a pilot embodied teammate that *feels* like a product no competitor has?
-2. **What's our edge?** Is the pitch "the most reliable CRM agents in the market" or "the most alive ones"? These need different investments, different storytelling, and different hires.
-3. **Which low-risk job should we pilot the other philosophy on?** Email Composer is the most defensible middle choice. RevOps Teammate is the most ambitious.
-4. **Who owns the judgment surface?** For every embodied agent we ship, someone has to decide how much room it's allowed. That's a product-and-design question, not an engineering one, and it doesn't have a default answer.
+1. **Where would I invest first if this were a real product?** A deep engineered pipeline that ships reliably and becomes table stakes, or a pilot embodied teammate that *feels* like a product no competitor has?
+2. **What's the edge?** Is the pitch "the most reliable CRM agents in the market" or "the most alive ones"? These need different investments, different storytelling, and different hires.
+3. **Which low-risk job is the best place to pilot the other philosophy?** Email Composer is the most defensible middle choice. RevOps Teammate is the most ambitious.
+4. **Who owns the judgment surface?** For every embodied agent you ship, someone has to decide how much room it's allowed. That's a product-and-design question, not an engineering one, and it doesn't have a default answer.
 
 ---
 

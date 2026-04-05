@@ -73,13 +73,13 @@ These six cover most of the revenue-ops surface area. Notice: they have *very di
 
 I have two prototypes. They sit at roughly opposite corners of the design space, and building both taught me more than either one alone would have.
 
-### pipeagent — the engineered pipeline
+### [pipeagent](https://github.com/kristjanelias-xtian/pipeagent) — the engineered pipeline
 
 Think of it as **a pipeline you designed**. For every run, the same steps happen in the same order: fetch the lead, research the company, score it against ICP, write back to the CRM, draft an email, *stop and ask a human to approve before sending*. Every step is predictable. The cost per run is known before you start. A human reviews the output at one specific moment, and the rest is automatic.
 
 It's boring in the good sense. Audit trails are structured. Failures are caught. You can price it per run and forecast monthly spend from volume.
 
-### digital-pd-team — the hired team
+### [digital-pd-team](https://github.com/kristjanelias-xtian/digital-pd-team) — the hired team
 
 Think of it as **a team you hired**. Three bots — Zeno the sales manager, Lux the SDR, Taro the account executive — live in a Telegram group and work for a fictional solar company. They have names, personalities, and job descriptions written in plain English. When a lead comes in, Zeno reads it, posts a message to the group, tags Lux to qualify. Lux does the work and posts back. Taro takes over when the lead is warm. They hand off in natural language. They talk to each other. They talk to the human in the group.
 

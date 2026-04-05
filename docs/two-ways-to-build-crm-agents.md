@@ -195,7 +195,36 @@ The deepest thing I've learned building these side by side is that **the framewo
 
 ## Zooming out: the rest of the map
 
-These two projects are two specific answers to the "who decides?" question. They aren't the only answers — they're poles on a spectrum, and the middle of that spectrum is where most of the interesting work is actually happening.
+These two projects are two specific answers to the "who decides?" question. They aren't the only answers — and, honestly, they aren't even the *extremes*. They're two points on a two-dimensional space, and most of the interesting work is happening in the middle.
+
+Here's the space, with both projects plotted on it:
+
+```mermaid
+quadrantChart
+    title The agent design space
+    x-axis "Graph decides" --> "Model decides"
+    y-axis "Structure as code" --> "Structure as prose"
+    quadrant-1 Embodied teams
+    quadrant-2 Prose workflows
+    quadrant-3 Compiled pipelines
+    quadrant-4 Typed autonomy
+    "pipeagent": [0.22, 0.18]
+    "digital-pd-team": [0.85, 0.82]
+    "Constrained pipelines (BAML, Outlines)": [0.06, 0.08]
+    "LangGraph supervisor": [0.48, 0.25]
+    "Orchestrator-workers": [0.5, 0.35]
+    "CrewAI crews": [0.6, 0.58]
+    "Unsupervised autonomous agent": [0.95, 0.6]
+```
+
+Two things this picture makes obvious that the prose alone kind of hides:
+
+1. **pipeagent and digital-pd-team are far apart, but neither is at a corner.** pipeagent isn't as far "graph decides" as a constrained-decoding pipeline (BAML/Outlines), because it still gives Claude a tool loop inside the research node. digital-pd-team isn't as far "model decides" as an unsupervised long-horizon agent, because it has a human in the group chat, mention-pattern routing, a base rulebook, and a handoff protocol — all written in prose, but all real scaffolding.
+2. **The two axes are correlated but not identical.** Most systems cluster along the diagonal (code → graph-decides, prose → model-decides), which is why the split *feels* like one dimension. But CrewAI and LangGraph's supervisor pattern live off-diagonal in interesting ways: supervisors give the model routing authority while keeping the tool surface typed; CrewAI keeps agents role-based and typed in Python while letting their collaboration be fairly emergent. That's where most "agent framework" innovation in 2026 is actually happening — the middle band.
+
+So the more accurate frame isn't "two ends of a spectrum." It's **two different substrate choices for encoding agent structure**: pipeagent puts the structure in *code and types*, digital-pd-team puts it in *prose and conventions*. The control-flow authority follows from that, but the substrate is the deeper choice, and the middle of the map is where you get to mix them.
+
+With that in mind, here's what lives in each half of the space.
 
 Anthropic articulates the same split in ["Building effective agents"](https://www.anthropic.com/engineering/building-effective-agents): they distinguish **workflows** ("systems where LLMs and tools are orchestrated through predefined code paths") from **agents** ("systems where LLMs dynamically direct their own processes and tool usage, maintaining control over how they accomplish tasks"). pipeagent is a workflow. digital-pd-team is an agent system. The patterns below are what live between.
 

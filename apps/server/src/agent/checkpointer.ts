@@ -6,7 +6,7 @@ let checkpointer: PostgresSaver | null = null;
 export async function getCheckpointer(): Promise<PostgresSaver> {
   if (!checkpointer) {
     const pool = new pg.Pool({
-      host: process.env.PG_HOST || 'aws-1-eu-west-1.pooler.supabase.com',
+      host: process.env.PG_HOST,
       port: Number(process.env.PG_PORT) || 5432,
       database: process.env.PG_DATABASE || 'postgres',
       user: process.env.PG_USER || 'postgres',

@@ -88,11 +88,7 @@ Plan A has 13 tasks left (3–15). Each is TDD-style and self-contained. Plan A 
 3. **Critical:** the plan is checked into pipeagent's git, but Plan A's *code* lives in `~/git/pd-helpers/`. All commits from Tasks 3–15 happen in the `pd-helpers` repo, not pipeagent. Don't confuse the two.
 4. Each task in Plan A has explicit test counts. After Task 15, `pnpm test` in `~/git/pd-helpers/` should show ~59 tests passing.
 
-**Known issue flagged during Plan A writing:** the spec's demo choreography names "Mari Tamm · Pirita residential" as the hero lead, but Mari Tamm is NOT in pipeagent's original 20-item pool (she's from `digital-pd-team/scripts/create-smoke-lead.sh`). Plan A ships with the 20 original entries and uses "Andrus Koppel · Smarten Logistics AS" as the pool test anchor. Decide before TEX:
-- Add Mari Tamm as a 21st pool entry in `pd-helpers/src/pool.ts`, OR
-- Update the demo choreography to use Andrus Koppel instead
-
-Not a blocker — noted at the end of Plan B.
+**Hero lead decision (settled 2026-04-11):** The demo uses **Andrus Koppel / Smarten Logistics AS** (slug `andrus-koppel-tallinn`, the first entry in the pool), NOT Mari Tamm. Mari Tamm is from `digital-pd-team/scripts/create-smoke-lead.sh` and was never in pipeagent's 20-item pool. Plan B's demo choreography references (and the spec's) should be updated to use Andrus when they're revisited. No code change to `pd-helpers/src/pool.ts` needed — it already anchors on Andrus.
 
 ### Mode 2: Start Plan B (pipeagent redesign)
 

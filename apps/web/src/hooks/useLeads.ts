@@ -30,6 +30,8 @@ export function useLeads(connectionId: string | null) {
 
   useEffect(() => {
     fetchLeads();
+    const interval = setInterval(fetchLeads, 30_000);
+    return () => clearInterval(interval);
   }, [fetchLeads]);
 
   return { leads, loading, refetch: fetchLeads };

@@ -48,28 +48,30 @@ agentIdentity.put('/:agentId', async (c) => {
   const connectionId = c.get('connectionId');
   const agentId = c.req.param('agentId');
   const body = await c.req.json();
-  const {
-    name = '',
-    mission = '',
-    personality = '',
-    rulebook = '',
-    config = {},
-  } = body;
+
+  // Fetch existing row to merge with partial updates
+  const { data: existing } = await getSupabase()
+    .from('agent_identity')
+    .select('*')
+    .eq('connection_id', connectionId)
+    .eq('agent_id', agentId)
+    .maybeSingle();
+
+  const merged = {
+    connection_id: connectionId,
+    agent_id: agentId,
+    name: body.name ?? existing?.name ?? '',
+    mission: body.mission ?? existing?.mission ?? '',
+    personality: body.personality ?? existing?.personality ?? '',
+    rulebook: body.rulebook ?? existing?.rulebook ?? '',
+    config: body.config !== undefined
+      ? { ...(existing?.config as Record<string, unknown> ?? {}), ...body.config }
+      : (existing?.config ?? {}),
+  };
 
   const { data, error } = await getSupabase()
     .from('agent_identity')
-    .upsert(
-      {
-        connection_id: connectionId,
-        agent_id: agentId,
-        name,
-        mission,
-        personality,
-        rulebook,
-        config,
-      },
-      { onConflict: 'connection_id,agent_id' },
-    )
+    .upsert(merged, { onConflict: 'connection_id,agent_id' })
     .select()
     .single();
 

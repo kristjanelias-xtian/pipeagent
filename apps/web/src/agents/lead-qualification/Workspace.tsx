@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useConnectionContext } from '../../context/ConnectionContext';
 import { useLeads } from '../../hooks/useLeads';
 import { useAgentRuns, useActivityLogs, useEmailDraft } from '../../hooks/useSupabaseRealtime';
 import { useAgentIdentity } from '../../hooks/useAgentIdentity';
+import { apiFetch } from '../../lib/api';
 import { IdentityRail } from './components/IdentityRail';
 import { ActivityStream } from './components/ActivityStream';
 import { InboxStrip } from './components/InboxStrip';
@@ -12,11 +13,21 @@ const AGENT_ID = 'lead-qualification' as const;
 
 export function LeadQualificationWorkspace() {
   const { connectionId } = useConnectionContext();
-  const { leads, loading: leadsLoading } = useLeads(connectionId);
+  const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads(connectionId);
   const runs = useAgentRuns(connectionId);
   const { identity } = useAgentIdentity(AGENT_ID);
 
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+
+  // Refetch leads when a run appears for a lead not in the current list
+  const leadIdSet = useRef(new Set<string>());
+  useEffect(() => {
+    leadIdSet.current = new Set(leads.map((l) => String(l.id)));
+  }, [leads]);
+  useEffect(() => {
+    const hasUnknownLead = runs.some((r) => r.lead_id && !leadIdSet.current.has(r.lead_id));
+    if (hasUnknownLead) refetchLeads();
+  }, [runs, refetchLeads]);
 
   const selectedRun = runs
     .filter((r) => r.lead_id === selectedLeadId)
@@ -24,6 +35,20 @@ export function LeadQualificationWorkspace() {
 
   const logs = useActivityLogs(selectedRun?.id ?? null);
   const draft = useEmailDraft(selectedRun?.id ?? null);
+
+  const [qualifying, setQualifying] = useState(false);
+
+  const startQualification = useCallback(async (leadId: string) => {
+    setQualifying(true);
+    try {
+      await apiFetch('/chat/message', {
+        method: 'POST',
+        body: JSON.stringify({ leadId }),
+      });
+    } finally {
+      setQualifying(false);
+    }
+  }, []);
 
   const agentName = identity?.name || 'Nora';
   const selectedLead = leads.find((l) => String(l.id) === selectedLeadId);
@@ -37,6 +62,17 @@ export function LeadQualificationWorkspace() {
         <div className="flex flex-col flex-1 min-h-0">
           {selectedRun ? (
             <ActivityStream agentName={agentName} leadTitle={leadTitle} logs={logs} />
+          ) : selectedLeadId ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-[var(--color-card)] border border-[var(--color-border-default)] rounded-lg">
+              <div className="text-sm text-[var(--color-text-secondary)]">{leadTitle}</div>
+              <button
+                onClick={() => startQualification(selectedLeadId)}
+                disabled={qualifying}
+                className="px-4 py-2 rounded bg-[var(--color-primary-dark)] text-white text-sm font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {qualifying ? 'Starting...' : 'Qualify this lead'}
+              </button>
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-[var(--color-text-tertiary)] text-sm bg-[var(--color-card)] border border-[var(--color-border-default)] rounded-lg">
               Select a lead from the inbox below

@@ -39,6 +39,21 @@ export async function getConnectionByPipedriveUser(
   return data as PipedriveConnection;
 }
 
+export async function getConnectionByCompany(
+  companyId: number
+): Promise<PipedriveConnection | null> {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('*')
+    .eq('pipedrive_company_id', companyId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return null;
+  return data as PipedriveConnection | null;
+}
+
 export async function upsertConnection(
   conn: Omit<PipedriveConnection, 'id' | 'created_at' | 'updated_at'> &
     Partial<Pick<PipedriveConnection, 'id'>>

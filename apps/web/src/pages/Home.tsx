@@ -35,29 +35,53 @@ export function Home() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       {/* Company header */}
-      <div className="flex items-center gap-4 p-5 bg-[var(--color-card)] border border-[var(--color-border-default)] rounded-xl mb-5">
-        <div
-          className="rounded-xl bg-gradient-to-br from-[var(--color-primary-bright)] to-[var(--color-primary-dark)] flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
-          style={{ width: 52, height: 52 }}
-        >
-          {(profile?.name ?? '?').charAt(0).toUpperCase()}
-        </div>
-        <div className="flex-1">
-          <div className="text-lg font-bold text-[var(--color-text-primary)] leading-tight">
-            {profile?.name || 'Set your company name'}
+      {profile?.name ? (
+        <div className="flex items-center gap-4 p-5 bg-[var(--color-card)] border border-[var(--color-border-default)] rounded-xl mb-5">
+          <div
+            className="rounded-xl bg-gradient-to-br from-[var(--color-primary-bright)] to-[var(--color-primary-dark)] flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
+            style={{ width: 52, height: 52 }}
+          >
+            {profile.name.charAt(0).toUpperCase()}
           </div>
-          <div className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-            {profile?.description || 'Edit your company profile to give every agent shared context.'}
+          <div className="flex-1">
+            <div className="text-lg font-bold text-[var(--color-text-primary)] leading-tight">
+              {profile.name}
+            </div>
+            {profile.description && (
+              <div className="text-sm text-[var(--color-text-secondary)] mt-0.5">
+                {profile.description}
+              </div>
+            )}
           </div>
+          <button
+            onClick={() => setShowCompanyEdit(true)}
+            className="flex items-center gap-1.5 px-3 py-2 border border-[var(--color-border-default)] rounded text-xs text-[var(--color-text-secondary)] hover:border-[var(--color-primary-dark)] hover:text-[var(--color-primary-dark)]"
+          >
+            <Pencil size={14} strokeWidth={2} />
+            Edit company profile
+          </button>
         </div>
+      ) : (
         <button
           onClick={() => setShowCompanyEdit(true)}
-          className="flex items-center gap-1.5 px-3 py-2 border border-[var(--color-border-default)] rounded text-xs text-[var(--color-text-secondary)] hover:border-[var(--color-primary-dark)] hover:text-[var(--color-primary-dark)]"
+          className="w-full flex items-center gap-4 p-5 bg-[var(--color-card)] border border-dashed border-[var(--color-border-default)] rounded-xl mb-5 text-left hover:border-[var(--color-primary-dark)] hover:bg-[#f8fcfa] transition"
         >
-          <Pencil size={14} strokeWidth={2} />
-          Edit company profile
+          <div
+            className="rounded-xl bg-[var(--color-border-subtle)] flex items-center justify-center text-[var(--color-text-tertiary)] flex-shrink-0"
+            style={{ width: 52, height: 52 }}
+          >
+            <Pencil size={22} strokeWidth={1.5} />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-[var(--color-text-secondary)] leading-tight">
+              Set up your company profile
+            </div>
+            <div className="text-xs text-[var(--color-text-tertiary)] mt-0.5">
+              Give every agent shared context about your business, ICP, and positioning.
+            </div>
+          </div>
         </button>
-      </div>
+      )}
 
       {/* Greeting */}
       <div className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight mb-1">

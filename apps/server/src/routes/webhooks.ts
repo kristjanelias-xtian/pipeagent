@@ -34,10 +34,13 @@ webhooks.post('/pipedrive', async (c) => {
     .maybeSingle();
 
   // Notify frontend of new lead via Supabase broadcast
-  getSupabase()
-    .channel(`leads-${connection.id}`)
-    .send({ type: 'broadcast', event: 'lead_added', payload: { lead_id: leadId } })
-    .catch(() => {});
+  const channel = getSupabase().channel(`leads-${connection.id}`);
+  channel.subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      await channel.send({ type: 'broadcast', event: 'lead_added', payload: { lead_id: leadId } });
+      getSupabase().removeChannel(channel);
+    }
+  });
 
   const config = (identity?.config ?? {}) as Partial<LeadQualificationConfig>;
   if (!config.auto_qualify) {

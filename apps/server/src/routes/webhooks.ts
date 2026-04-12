@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { PipedriveWebhookPayload } from '../pipedrive/types.js';
 import type { LeadQualificationConfig } from '@pipeagent/shared';
-import { getConnectionByPipedriveUser } from '../lib/connections.js';
+import { getConnectionByPipedriveUser, getConnectionByCompany } from '../lib/connections.js';
 import { getSupabase } from '../lib/supabase.js';
 import { createRun } from '../agent/logger.js';
 import { runQualification } from '../agent/graph.js';
@@ -19,9 +19,15 @@ webhooks.post('/pipedrive', async (c) => {
   const leadId = String(payload.meta.id);
   const { company_id, user_id } = payload.meta;
 
-  // Find the connection for this user
-  const connection = await getConnectionByPipedriveUser(user_id, company_id);
+  console.log(`Webhook lead.added: lead=${leadId} user=${user_id} company=${company_id}`);
+
+  // Find the connection for this user -- try by user first, fall back to company-only
+  let connection = await getConnectionByPipedriveUser(user_id, company_id);
   if (!connection) {
+    connection = await getConnectionByCompany(company_id);
+  }
+  if (!connection) {
+    console.log(`Webhook: no connection found for user=${user_id} company=${company_id}`);
     return c.json({ status: 'ignored', reason: 'no_connection' });
   }
 

@@ -9,11 +9,14 @@ import { runQualification } from '../agent/graph.js';
 const webhooks = new Hono();
 
 webhooks.post('/pipedrive', async (c) => {
-  const payload = (await c.req.json()) as PipedriveWebhookPayload;
+  const raw = await c.req.json();
+  console.log('Webhook raw payload:', JSON.stringify(raw).slice(0, 500));
+  const payload = raw as PipedriveWebhookPayload;
 
   // Only handle lead.added events
-  if (payload.meta.object !== 'lead' || (payload.meta.action !== 'added' && payload.meta.action !== 'create')) {
-    return c.json({ status: 'ignored', reason: `${payload.meta.action}.${payload.meta.object}` });
+  if (payload.meta?.object !== 'lead' || (payload.meta?.action !== 'added' && payload.meta?.action !== 'create')) {
+    console.log(`Webhook ignored: action=${payload.meta?.action} object=${payload.meta?.object} event=${payload.event}`);
+    return c.json({ status: 'ignored', reason: `${payload.meta?.action}.${payload.meta?.object}` });
   }
 
   const leadId = String(payload.meta.id);

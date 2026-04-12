@@ -30,6 +30,10 @@ export function useLeads(connectionId: string | null) {
 
   useEffect(() => {
     fetchLeads();
+    // Poll as fallback -- webhook + realtime is the primary signal,
+    // but polling covers cases where webhooks aren't firing
+    const interval = setInterval(fetchLeads, 30_000);
+    return () => clearInterval(interval);
   }, [fetchLeads]);
 
   return { leads, loading, refetch: fetchLeads };

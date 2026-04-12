@@ -33,6 +33,12 @@ webhooks.post('/pipedrive', async (c) => {
     .eq('agent_id', 'lead-qualification')
     .maybeSingle();
 
+  // Notify frontend of new lead via Supabase broadcast
+  getSupabase()
+    .channel(`leads-${connection.id}`)
+    .send({ type: 'broadcast', event: 'lead_added', payload: { lead_id: leadId } })
+    .catch(() => {});
+
   const config = (identity?.config ?? {}) as Partial<LeadQualificationConfig>;
   if (!config.auto_qualify) {
     return c.json({ status: 'ignored', reason: 'auto_qualify_disabled' });

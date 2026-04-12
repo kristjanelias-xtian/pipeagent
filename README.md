@@ -139,7 +139,7 @@ pipeagent/
 │   │   │   ├── pipedrive/
 │   │   │   │   ├── client.ts       # Pipedrive API v1 wrapper
 │   │   │   │   └── oauth.ts        # OAuth token exchange + refresh
-│   │   │   ├── routes/             # auth, chat, leads, deals, settings, hub/agent config
+│   │   │   ├── routes/             # auth, chat, leads, deals, settings, company-profile, agent-identity, hub/agent config
 │   │   │   ├── lib/                # Supabase client, connection helpers
 │   │   │   ├── memory/             # Org research cache (7-day TTL)
 │   │   │   └── seed/               # Test data generation
@@ -151,16 +151,16 @@ pipeagent/
 │           ├── pages/              # Home, Settings, BuildYourOwn, LoginPage
 │           ├── agents/             # Per-agent workspaces + registry
 │           │   ├── registry.ts     # Agent metadata registry
-│           │   ├── lead-qualification/  # LeadsList, AgentInspector, ChatPanel
+│           │   ├── lead-qualification/  # IdentityRail, ActivityStream, InboxStrip, Workspace
 │           │   └── deal-coach/     # DealList, DealAnalysis, DealChat
-│           ├── hooks/              # useConnection, useLeads, useDeals, useDealAnalysis
+│           ├── hooks/              # useConnection, useLeads, useDeals, useDealAnalysis, useAgentIdentity, useCompanyProfile
 │           └── lib/                # API client, Supabase client
 │
 ├── packages/
 │   └── shared/                     # TypeScript types (CRM, agent state, DB rows)
 │
 ├── supabase/
-│   └── migrations/                 # 001-004: initial, profiles, followup, agent hub
+│   └── migrations/                 # 001-005: initial, profiles, followup, agent hub, identity refactor
 │
 ├── .env.example
 ├── CLAUDE.md                       # AI coding assistant context
@@ -187,7 +187,7 @@ The single Railway service serves both the API and the built frontend.
 2. Set OAuth redirect URI to `https://<your-domain>/auth/callback`
 3. Required scopes: `leads:full`, `deals:full`, `persons:full`, `organizations:full`, `activities:read`, `users:read`, `notes:full`
 4. Copy Client ID and Client Secret to your environment variables
-5. Once authenticated, the webhook for `lead.added` is registered automatically during the OAuth callback
+5. Once authenticated, the webhook for `lead.create` is registered automatically during the OAuth callback (v2 format)
 
 ## API Endpoints
 
@@ -200,10 +200,10 @@ All routes except `/auth` and `/webhooks` require JWT authentication (`Authoriza
 | `GET` | `/auth/login` | Initiate Pipedrive OAuth |
 | `GET` | `/auth/callback` | OAuth callback + webhook registration |
 | `GET` | `/me` | Current user/connection info |
-| `POST` | `/webhooks/pipedrive` | Pipedrive webhook handler (`lead.added`) |
+| `POST` | `/webhooks/pipedrive` | Pipedrive v2 webhook handler (`lead.create`); creates pending or running run based on `auto_qualify` config |
 | **Lead Qualification** | | |
 | `POST` | `/chat/message` | Trigger agent run (skips if existing run) |
-| `POST` | `/chat/run` | Force new agent run (requalify) |
+| `POST` | `/chat/run` | Force new agent run (manual qualify / requalify) |
 | `POST` | `/chat/resume` | Resume paused run with HITL response |
 | `GET` | `/chat/runs/:leadId` | List runs for a lead |
 | `GET` | `/chat/logs/:runId` | Activity logs for a run |
@@ -215,9 +215,12 @@ All routes except `/auth` and `/webhooks` require JWT authentication (`Authoriza
 | `GET` | `/deals/:dealId/chat` | Get chat history |
 | `GET` | `/deals` | List deals from Pipedrive |
 | **Configuration** | | |
+| `GET/PUT` | `/company-profile` | Company profile (name, description, positioning) |
+| `GET/PUT` | `/agent-identity/:agentId` | Per-agent identity (name, mission, personality, rulebook, config JSONB) |
 | `GET/PUT` | `/settings` | Business profile (ICP criteria, outreach tone) |
 | `GET/PUT` | `/hub-config` | Global context (shared across all agents) |
 | `GET/PUT` | `/agent-config/:agentId` | Per-agent local context |
+| `GET` | `/settings/webhooks` | List registered Pipedrive webhooks |
 | `POST` | `/settings/register-webhook` | Manually register Pipedrive webhook |
 | `POST` | `/seed/generate` | Generate test leads (1-10) |
 

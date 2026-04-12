@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Pencil } from 'lucide-react';
-import { useConnection } from '../hooks/useConnection';
+import { useConnectionContext } from '../context/ConnectionContext';
 import { agents } from '../agents/registry';
 import { AgentAvatar } from '../components/AgentAvatar';
 import { AgentIcon, type LucideIconName } from '../components/AgentIcon';
@@ -10,7 +10,7 @@ import { useCompanyProfile } from '../hooks/useCompanyProfile';
 import { useAgentRuns } from '../hooks/useSupabaseRealtime';
 
 export function Home() {
-  const { connectionId, user } = useConnection();
+  const { connectionId, user } = useConnectionContext();
   const { profile } = useCompanyProfile();
   const runs = useAgentRuns(connectionId);
   const [showCompanyEdit, setShowCompanyEdit] = useState(false);

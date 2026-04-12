@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useConnection } from '../hooks/useConnection';
+import { useConnectionContext } from '../context/ConnectionContext';
 import { CompanyProfileEditor } from '../components/CompanyProfileEditor';
 import { useCompanyProfile } from '../hooks/useCompanyProfile';
 
@@ -57,7 +57,7 @@ function Row({ label, value }: { label: string; value?: string }) {
 }
 
 function PipedriveConnectionTab() {
-  const { user } = useConnection();
+  const { user } = useConnectionContext();
 
   return (
     <div className="max-w-lg">

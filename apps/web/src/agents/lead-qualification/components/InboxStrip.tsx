@@ -10,11 +10,13 @@ export function InboxStrip({
   runs,
   selectedLeadId,
   onSelect,
+  loading = false,
 }: {
   leads: Lead[];
   runs: AgentRunRow[];
   selectedLeadId: string | null;
   onSelect: (leadId: string) => void;
+  loading?: boolean;
 }) {
   const runByLead = new Map(runs.map((r) => [r.lead_id, r]));
 
@@ -24,7 +26,13 @@ export function InboxStrip({
         Inbox
       </span>
 
-      {leads.length === 0 && (
+      {loading && leads.length === 0 && (
+        <span className="text-xs text-[var(--color-text-tertiary)] italic">
+          Loading leads...
+        </span>
+      )}
+
+      {!loading && leads.length === 0 && (
         <span className="text-xs text-[var(--color-text-tertiary)] italic">
           No leads yet.
         </span>

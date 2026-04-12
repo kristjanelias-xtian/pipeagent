@@ -200,6 +200,7 @@ export interface CompanyProfile {
 export interface LeadQualificationConfig {
   icp_criteria: IcpCriterion[];
   followup_days: number;
+  auto_qualify: boolean;
 }
 
 // Structured config for deal-coach agent_identity.config JSONB

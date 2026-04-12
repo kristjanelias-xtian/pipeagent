@@ -74,6 +74,10 @@ export function IdentityRail() {
               identity={identity}
               criteriaCount={criteria.length}
               totalWeight={criteria.reduce((s, c) => s + (c.weight || 0), 0)}
+              autoQualify={config.auto_qualify ?? false}
+              onToggleAutoQualify={() => {
+                save({ config: { ...config, auto_qualify: !config.auto_qualify } });
+              }}
               onEdit={() => setEditMode(true)}
             />
           )}
@@ -102,11 +106,15 @@ function IdentityReadOnly({
   identity,
   criteriaCount,
   totalWeight,
+  autoQualify,
+  onToggleAutoQualify,
   onEdit,
 }: {
   identity: NonNullable<ReturnType<typeof useAgentIdentity>['identity']>;
   criteriaCount: number;
   totalWeight: number;
+  autoQualify: boolean;
+  onToggleAutoQualify: () => void;
   onEdit: () => void;
 }) {
   const meta = getAgent(AGENT_ID)!;
@@ -123,6 +131,12 @@ function IdentityReadOnly({
         <Field label="Personality" value={identity.personality || meta.defaultIdentity.personality} />
         <Field label="ICP criteria" value={`${criteriaCount} criteria, total weight ${totalWeight}`} />
         {identity.rulebook && <Field label="Rulebook" value={identity.rulebook} />}
+        <ToggleField
+          label="Auto-qualify new leads"
+          description={autoQualify ? 'Runs automatically on new leads' : 'Waits for you to trigger'}
+          checked={autoQualify}
+          onChange={onToggleAutoQualify}
+        />
       </Section>
 
       <button
@@ -227,6 +241,39 @@ function Field({ label, value, locked = false }: { label: string; value: string;
       >
         {value}
       </div>
+    </div>
+  );
+}
+
+function ToggleField({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 mt-1">
+      <div>
+        <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-tertiary)]">{label}</div>
+        <div className="text-[10px] text-[var(--color-text-tertiary)] leading-tight">{description}</div>
+      </div>
+      <button
+        onClick={onChange}
+        className={`relative w-8 h-[18px] rounded-full flex-shrink-0 transition-colors ${
+          checked ? 'bg-[var(--color-primary-dark)]' : 'bg-[var(--color-border-default)]'
+        }`}
+      >
+        <span
+          className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform ${
+            checked ? 'left-[16px]' : 'left-[2px]'
+          }`}
+        />
+      </button>
     </div>
   );
 }

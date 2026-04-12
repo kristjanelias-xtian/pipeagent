@@ -115,7 +115,7 @@ export type LucideIconName = string;
 // --- Database rows ---
 
 export type AgentRunTrigger = 'webhook' | 'chat' | 'manual';
-export type AgentRunStatus = 'running' | 'paused' | 'completed' | 'failed';
+export type AgentRunStatus = 'pending' | 'running' | 'paused' | 'completed' | 'failed';
 export type EmailDraftStatus = 'pending' | 'sent' | 'discarded' | 'edited';
 
 export interface AgentRunRow {

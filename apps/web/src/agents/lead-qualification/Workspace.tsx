@@ -30,7 +30,7 @@ export function LeadQualificationWorkspace() {
   const leadTitle = selectedLead?.title ?? 'No lead selected';
 
   return (
-    <div className="flex flex-col h-full gap-2 p-3">
+    <div className="flex flex-col h-full gap-2 p-3 overflow-hidden">
       <div className="flex gap-2 flex-1 min-h-0">
         <IdentityRail />
 

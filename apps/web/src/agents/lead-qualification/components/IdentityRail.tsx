@@ -30,7 +30,7 @@ export function IdentityRail() {
 
   return (
     <>
-      <aside className="w-[300px] bg-[#f0faf5] border border-[var(--color-primary-dark)] rounded-lg flex flex-col flex-shrink-0 min-h-0">
+      <aside className="w-[300px] bg-[#f0faf5] border border-[var(--color-primary-dark)] rounded-lg flex flex-col flex-shrink-0 min-h-0 overflow-hidden">
         <div className="p-4 pb-2 flex-shrink-0">
           <AgentAvatar name={identity.name || meta.defaultIdentity.name} size={56} className="mx-auto" />
           <div className="text-center font-bold text-[var(--color-text-primary)] mt-2">

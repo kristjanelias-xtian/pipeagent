@@ -11,6 +11,7 @@ import { scoringSubgraph } from './subagents/scoring.js';
 import { outreachSubgraph } from './subagents/outreach.js';
 import { logActivity, updateRunStatus } from './logger.js';
 import { getSupabase } from '../lib/supabase.js';
+import type { IcpCriterion } from '@pipeagent/shared';
 
 // Wrapper nodes that bridge parent state → sub-agent state
 
@@ -34,16 +35,18 @@ async function runResearch(state: AgentStateType): Promise<Partial<AgentStateTyp
 }
 
 async function runScoring(state: AgentStateType): Promise<Partial<AgentStateType>> {
-  const { research, lead, runId, settings } = state;
+  const { research, lead, runId, identity } = state;
   if (!research) return {};
 
   await logActivity(runId, 'scoring', 'node_enter');
+
+  const icpCriteria = (identity?.config as { icp_criteria?: IcpCriterion[] } | undefined)?.icp_criteria ?? [];
 
   const result = await scoringSubgraph.invoke({
     research,
     leadTitle: lead?.title ?? 'Unknown Lead',
     runId,
-    icpCriteria: settings?.icp_criteria ?? [],
+    icpCriteria,
     result: null,
     label: null,
   });
@@ -58,21 +61,20 @@ async function runScoring(state: AgentStateType): Promise<Partial<AgentStateType
 }
 
 async function runOutreach(state: AgentStateType): Promise<Partial<AgentStateType>> {
-  const { research, scoring, label, lead, person, runId, settings } = state;
+  const { research, scoring, label, lead, person, runId, companyProfile, identity } = state;
   if (!research || !scoring || !label) return {};
 
   await logActivity(runId, 'outreach', 'node_enter', { label });
 
-  // Only run the drafting part — HITL interrupt is a separate node in parent graph
   const result = await outreachSubgraph.invoke({
     research,
     scoring,
     label,
     leadTitle: lead?.title ?? 'Unknown Lead',
     personName: person?.name ?? null,
-    businessDescription: settings?.business_description ?? '',
-    valueProposition: settings?.value_proposition ?? '',
-    outreachTone: settings?.outreach_tone ?? '',
+    businessDescription: companyProfile?.description ?? '',
+    valueProposition: companyProfile?.value_proposition ?? '',
+    outreachTone: identity?.personality ?? '',
     runId,
     draft: null,
   });

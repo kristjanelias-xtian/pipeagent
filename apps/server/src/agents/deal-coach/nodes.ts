@@ -57,23 +57,23 @@ export async function fetchDealContext(
   const stage = stages.find((s) => s.id === deal.stage_id);
   const stageName = stage?.name ?? '';
 
-  // Fetch hub_config and agent_config from Supabase
-  const [hubConfigResult, agentConfigResult] = await Promise.all([
+  // Fetch company_profile and agent_identity from Supabase
+  const [companyProfileResult, identityResult] = await Promise.all([
     supabase
-      .from('hub_config')
-      .select('global_context')
+      .from('company_profile')
+      .select('*')
       .eq('connection_id', connectionId)
-      .single(),
+      .maybeSingle(),
     supabase
-      .from('agent_config')
-      .select('local_context')
+      .from('agent_identity')
+      .select('*')
       .eq('connection_id', connectionId)
       .eq('agent_id', AGENT_ID)
-      .single(),
+      .maybeSingle(),
   ]);
 
-  const globalContext = hubConfigResult.data?.global_context ?? '';
-  const localContext = agentConfigResult.data?.local_context ?? '';
+  const companyProfile = companyProfileResult.data ?? null;
+  const identity = identityResult.data ?? null;
 
   await logActivity(
     runId,
@@ -83,7 +83,7 @@ export async function fetchDealContext(
     AGENT_ID,
   );
 
-  return { deal, activities, notes, participants, organization, stageName, globalContext, localContext };
+  return { deal, activities, notes, participants, organization, stageName, companyProfile, identity };
 }
 
 // --- analyzeSignals ---
@@ -91,13 +91,13 @@ export async function fetchDealContext(
 export async function analyzeSignals(
   state: DealCoachStateType,
 ): Promise<Partial<DealCoachStateType>> {
-  const { deal, activities, notes, participants, organization, stageName, globalContext, localContext, runId } = state;
+  const { deal, activities, notes, participants, organization, stageName, companyProfile, identity, runId } = state;
 
   await logActivity(runId, 'analyzeSignals', 'node_enter', {}, AGENT_ID);
 
   const contextParts: string[] = [];
-  if (globalContext) contextParts.push(`Business context: ${globalContext}`);
-  if (localContext) contextParts.push(`Deal Coach instructions: ${localContext}`);
+  if (companyProfile?.description) contextParts.push(`Business context: ${companyProfile.description}`);
+  if (identity?.mission) contextParts.push(`Deal Coach instructions: ${identity.mission}`);
 
   const prompt = `You are analyzing a Pipedrive deal to identify signals about its health.
 
@@ -192,13 +192,13 @@ export async function scoreHealth(
 export async function generateActions(
   state: DealCoachStateType,
 ): Promise<Partial<DealCoachStateType>> {
-  const { signals, healthScore, deal, stageName, globalContext, localContext, connectionId, dealId, runId, activities } = state;
+  const { signals, healthScore, deal, stageName, companyProfile, identity, connectionId, dealId, runId, activities } = state;
 
   await logActivity(runId, 'generateActions', 'node_enter', { healthScore }, AGENT_ID);
 
   const contextParts: string[] = [];
-  if (globalContext) contextParts.push(`Business context: ${globalContext}`);
-  if (localContext) contextParts.push(`Deal Coach instructions: ${localContext}`);
+  if (companyProfile?.description) contextParts.push(`Business context: ${companyProfile.description}`);
+  if (identity?.mission) contextParts.push(`Deal Coach instructions: ${identity.mission}`);
 
   const prompt = `You are a sales coach. Based on the deal analysis below, suggest 3-5 specific actions to advance this deal.
 

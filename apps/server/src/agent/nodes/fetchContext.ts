@@ -1,14 +1,4 @@
 import type { AgentStateType } from '../state.js';
-import type { IcpCriterion } from '@pipeagent/shared';
-
-// Local type for the legacy business_profiles table (will be replaced by company_profile + agent_identity)
-interface BusinessProfile {
-  business_description: string;
-  value_proposition: string;
-  icp_criteria: IcpCriterion[];
-  outreach_tone: string;
-  followup_days: number;
-}
 import { logActivity } from '../logger.js';
 import { getClientForConnection } from '../../lib/connections.js';
 import { getSupabase } from '../../lib/supabase.js';
@@ -44,29 +34,29 @@ export async function fetchContext(state: AgentStateType): Promise<Partial<Agent
     });
   }
 
-  // Fetch business profile / settings
-  let settings: BusinessProfile | null = null;
-  const { data: profile } = await getSupabase()
-    .from('business_profiles')
-    .select('business_description, value_proposition, icp_criteria, outreach_tone, followup_days')
-    .eq('connection_id', connectionId)
-    .single();
+  const [companyProfileResult, identityResult] = await Promise.all([
+    getSupabase()
+      .from('company_profile')
+      .select('*')
+      .eq('connection_id', connectionId)
+      .maybeSingle(),
+    getSupabase()
+      .from('agent_identity')
+      .select('*')
+      .eq('connection_id', connectionId)
+      .eq('agent_id', 'lead-qualification')
+      .maybeSingle(),
+  ]);
 
-  if (profile) {
-    settings = {
-      business_description: profile.business_description,
-      value_proposition: profile.value_proposition,
-      icp_criteria: profile.icp_criteria as IcpCriterion[],
-      outreach_tone: profile.outreach_tone,
-      followup_days: profile.followup_days ?? 3,
-    };
-  }
+  const companyProfile = companyProfileResult.data ?? null;
+  const identity = identityResult.data ?? null;
 
   await logActivity(runId, 'fetchContext', 'node_exit', {
     lead_title: lead.title,
     org_name: organization?.name ?? 'none',
-    has_settings: !!settings,
+    has_company_profile: !!companyProfile,
+    has_identity: !!identity,
   });
 
-  return { lead, person, organization, settings };
+  return { lead, person, organization, companyProfile, identity };
 }

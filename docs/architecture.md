@@ -15,8 +15,8 @@ Four additional agents are registered in the hub as simulated placeholders: Meet
 
 When a lead is added to Pipedrive, here's what happens:
 
-1. **Trigger** — Pipedrive fires a `lead.added` webhook → hits `POST /webhooks/pipedrive` → server creates an `agent_run` record and starts the LangGraph pipeline in the background
-2. **Fetch context** — The agent pulls lead, person, and organization data from Pipedrive's API, plus the user's business profile (ICP criteria, outreach tone) from the database
+1. **Trigger** — Pipedrive fires a v2 `lead.create` webhook → hits `POST /webhooks/pipedrive` → if `auto_qualify` config is on, server creates an `agent_run` (status: `running`) and starts the LangGraph pipeline in the background; if off, creates a `pending` run so the frontend knows about the new lead via Supabase Realtime, and the user can manually trigger qualification from the UI
+2. **Fetch context** — The agent pulls lead, person, and organization data from Pipedrive's API, plus the agent identity (ICP criteria, personality, rulebook) and company profile from the database
 3. **Research** — If no recent research exists for this org (7-day cache), Claude searches the web for company info (size, industry, funding, tech stack, news)
 4. **Score** — Claude evaluates the research against the user's ICP criteria, producing a score (0-100) and label (hot/warm/cold)
 5. **Write back** — The score and label are written back to the Pipedrive lead, and an HTML note is added with the full scoring breakdown
@@ -68,7 +68,7 @@ stateDiagram-v2
 
 | Node | File | What it does |
 |------|------|-------------|
-| `fetchContext` | `nodes/fetchContext.ts` | Fetches lead, person, org from Pipedrive API. Loads business profile from `business_profiles` table. |
+| `fetchContext` | `nodes/fetchContext.ts` | Fetches lead, person, org from Pipedrive API. Loads agent identity (config, ICP criteria) from `agent_identity` table and company profile from `company_profile` table. |
 | `checkMemory` | `nodes/checkMemory.ts` | Looks up `org_memory` table for cached research. If `last_researched_at` < 7 days ago, sets `memoryFresh = true`. |
 | `runResearch` | `graph.ts` (wrapper) | Invokes the research sub-agent. Bridges parent state → sub-agent state. |
 | `saveResearch` | `nodes/saveResearch.ts` | Upserts research results into `org_memory` table with current timestamp. |
@@ -76,7 +76,7 @@ stateDiagram-v2
 | `writeBack` | `nodes/writeBack.ts` | Updates Pipedrive lead label (hot/warm/cold). Creates an HTML note with scoring details. Updates `agent_runs` row with score + label. |
 | `runOutreach` | `graph.ts` (wrapper) | Invokes the outreach sub-agent. Inserts draft into `email_drafts` table. |
 | `hitlReview` | `graph.ts` | Calls LangGraph `interrupt()` — pauses execution and checkpoints state. Sets run status to `paused`. |
-| `logActivity` | `nodes/logActivity.ts` | Marks the run as `completed` (or `failed`). |
+| `logActivity` | `nodes/logActivity.ts` | If HITL action is `send`, creates email activity and follow-up activity in Pipedrive. Marks the run as `completed` (or `failed`). |
 
 #### Conditional Routing
 
@@ -178,7 +178,7 @@ agent_runs
 ├── lead_id
 ├── agent_id (TEXT, default 'lead-qualification')
 ├── trigger ('webhook' | 'chat' | 'manual')
-├── status ('running' | 'paused' | 'completed' | 'failed')
+├── status ('pending' | 'running' | 'paused' | 'completed' | 'failed')
 ├── graph_state (JSONB)
 ├── score (integer)
 └── label ('hot' | 'warm' | 'cold')
@@ -207,7 +207,23 @@ email_drafts                           ← Supabase Realtime enabled
 ├── subject / body
 └── status ('pending' | 'sent' | 'discarded' | 'edited')
 
-business_profiles
+agent_identity
+├── id (UUID, PK)
+├── connection_id → connections.id
+├── agent_id (TEXT)
+├── name / mission / personality / rulebook (TEXT)
+├── config (JSONB) — e.g. LeadQualificationConfig: { icp_criteria, followup_days, auto_qualify }
+├── created_at / updated_at
+└── UNIQUE(connection_id, agent_id)
+
+company_profile
+├── id (UUID, PK)
+├── connection_id → connections.id (UNIQUE)
+├── name / description
+├── service_area / value_proposition
+└── notes (TEXT)
+
+business_profiles  (legacy, backfilled into agent_identity)
 ├── id (UUID, PK)
 ├── connection_id → connections.id (UNIQUE)
 ├── business_description
@@ -290,14 +306,16 @@ React 19 SPA built with Vite 6 and Tailwind CSS 4. Located in `apps/web/`.
 | `HubShell` | `components/HubShell.tsx` | Top-level layout: TopBar + Sidebar + outlet |
 | `TopBar` | `components/TopBar.tsx` | Logo, Pipedrive domain, user avatar |
 | `Sidebar` | `components/Sidebar.tsx` | Collapsible nav: agents, home, settings, build |
-| `Home` | `pages/Home.tsx` | Agent grid with status badges + recent activity feed |
+| `Home` | `pages/Home.tsx` | Company profile header (setup prompt when empty), agent grid, simulated agents |
 | `Settings` | `pages/Settings.tsx` | Tabs: Business Context (global + per-agent), Connection, Notifications |
 | `LoginPage` | `pages/LoginPage.tsx` | OAuth login screen |
 | `BuildYourOwn` | `pages/BuildYourOwn.tsx` | Placeholder for custom agent development |
-| `LeadsList` | `agents/lead-qualification/LeadsList.tsx` | Lead cards with score badges, run triggers |
-| `AgentInspector` | `agents/lead-qualification/AgentInspector.tsx` | Realtime activity log viewer |
-| `ChatPanel` | `agents/lead-qualification/ChatPanel.tsx` | Agent messages and action controls |
-| `EmailDraftBar` | `agents/lead-qualification/EmailDraftBar.tsx` | Email review with HITL actions |
+| `Workspace` | `agents/lead-qualification/Workspace.tsx` | Main workspace: IdentityRail + ActivityStream + Verdict panel + InboxStrip |
+| `IdentityRail` | `agents/lead-qualification/components/IdentityRail.tsx` | Agent identity card: avatar, role, company link, "Your Shape" (mission, personality, ICP, auto-qualify toggle), edit mode |
+| `ActivityStream` | `agents/lead-qualification/components/ActivityStream.tsx` | Realtime pipeline steps with product/technical view toggle; expandable sub-events in technical mode |
+| `InboxStrip` | `agents/lead-qualification/components/InboxStrip.tsx` | Horizontal lead inbox with status badges; pending leads shown with amber highlight |
+| `EmailDraftBar` | `components/EmailDraftBar.tsx` | Email review with HITL actions (send/edit/discard) |
+| `CompanyProfileEditor` | `components/CompanyProfileEditor.tsx` | Modal for editing company profile (name, description, positioning) |
 | `DealList` | `agents/deal-coach/DealList.tsx` | Filterable deal cards (All/At Risk/Action Needed) |
 | `DealAnalysis` | `agents/deal-coach/DealAnalysis.tsx` | Health score, signals, and action cards |
 | `DealChat` | `agents/deal-coach/DealChat.tsx` | Coaching chat with suggested prompts |
@@ -314,33 +332,43 @@ React 19 SPA built with Vite 6 and Tailwind CSS 4. Located in `apps/web/`.
 | `useHubConfig` | Fetch/update global context from `/hub-config` |
 | `useAgentConfig` | Fetch/update per-agent local context from `/agent-config` |
 | `useRecentActivity` | Fetch recent activity logs for the home page |
-| `useSupabaseRealtime` | Exports `useActivityLogs`, `useAgentRuns`, `useEmailDraft` — each subscribes to a Supabase Realtime channel |
+| `useAgentIdentity` | Fetch/save agent identity (name, mission, personality, config) via `/agent-identity/:agentId`; merges with registry defaults |
+| `useCompanyProfile` | Fetch/save company profile via `/company-profile` |
+| `useSupabaseRealtime` | Exports `useActivityLogs`, `useAgentRuns`, `useEmailDraft` -- each subscribes to a Supabase Realtime `postgres_changes` channel |
 
 ### API Integration
 
-All API calls go through `lib/api.ts` which wraps `fetch` and automatically attaches the `X-Connection-Id` header from localStorage. The connection ID is the sole auth boundary — there is no Supabase Auth.
+All API calls go through `lib/api.ts` which wraps `fetch` and automatically attaches the JWT `Authorization: Bearer` header from localStorage. `useLeads` polls the Pipedrive API every 30s as a fallback, and also refetches when `useAgentRuns` detects a run for an unknown lead ID (triggered by webhook creating a pending/running run).
 
-## Settings & ICP Flow
+## Identity & Config Flow
 
-The business profile flows from the settings UI to the agent pipeline:
+Agent configuration flows from the UI to the pipeline through two systems:
 
-1. User configures their profile in `SettingsPanel`: business description, value proposition, ICP criteria (array of `{ name, description, weight }`), and outreach tone
-2. Saved to `business_profiles` table via `PUT /settings`
-3. During `fetchContext`, the agent loads the business profile into state as `settings`
-4. **Scoring sub-agent** receives `settings.icp_criteria` — each criterion is evaluated against the research data
-5. **Outreach sub-agent** receives `settings.business_description`, `settings.value_proposition`, and `settings.outreach_tone` — used to personalize the email draft
+**Agent Identity** (`agent_identity` table):
+1. User configures the agent in the `IdentityRail` sidebar: name, mission, personality, rulebook, ICP criteria, and auto-qualify toggle
+2. Saved to `agent_identity` table via `PUT /agent-identity/:agentId` (partial updates are merged with existing row; config is deep-merged)
+3. During `fetchContext`, the agent loads identity into state
+4. **Scoring sub-agent** receives `identity.config.icp_criteria` -- each criterion is evaluated against the research data
+5. **Outreach sub-agent** receives identity personality + company profile for email personalization
 
-This means changing your ICP criteria or outreach tone takes effect on the next agent run without any code changes.
+**Company Profile** (`company_profile` table):
+1. User sets up company info via `CompanyProfileEditor` modal (accessible from Home page and IdentityRail)
+2. Loaded during `fetchContext` alongside agent identity
+3. Provides shared business context to all agents
+
+Changes take effect on the next agent run without any code changes.
 
 ## Webhook Flow
 
-1. During OAuth callback (`/auth/callback`), the server auto-registers a Pipedrive webhook for `lead.added` events pointing to `{WEBHOOK_URL || PUBLIC_SERVER_URL}/webhooks/pipedrive`
-2. When Pipedrive fires the webhook, the handler at `POST /webhooks/pipedrive`:
-   - Validates the event type is `added` and entity is `lead`
-   - Looks up the connection by matching Pipedrive company domain
-   - Creates a new `agent_run` record
-   - Starts the qualification pipeline in the background (non-blocking response)
-3. The webhook can also be manually registered via `POST /settings/register-webhook`
+1. During OAuth callback (`/auth/callback`), the server auto-registers a Pipedrive webhook for `lead.create` events pointing to `{WEBHOOK_URL || PUBLIC_SERVER_URL}/webhooks/pipedrive`
+2. Pipedrive sends **v2 format** webhooks (lead data in `data` field, not `meta`). App-created webhooks are always v2 and are not visible in the Pipedrive UI (known limitation) -- only via API (`GET /settings/webhooks`)
+3. When Pipedrive fires the webhook, the handler at `POST /webhooks/pipedrive`:
+   - Extracts lead ID from `data.id` (v2) or `meta.id` (v1 fallback)
+   - Looks up the connection by `user_id + company_id`, falling back to `company_id` only (the webhook `user_id` may differ from the OAuth-authenticated user)
+   - Checks the agent's `auto_qualify` config flag
+   - If `auto_qualify` is on: creates a `running` agent_run and starts the LangGraph pipeline in the background
+   - If `auto_qualify` is off: creates a `pending` agent_run (the frontend picks this up via Supabase Realtime and shows the lead with a "Qualify" button)
+4. The webhook can also be manually registered via `POST /settings/register-webhook`
 
 ## Key Decisions & Trade-offs
 

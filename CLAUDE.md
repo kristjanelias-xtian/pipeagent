@@ -36,20 +36,24 @@ No test framework is configured yet.
 Hono HTTP server with these route groups mounted in `server.ts`:
 - `/auth` — Pipedrive OAuth flow (login → callback), JWT token generation
 - `/me` — Get authenticated user/connection info
-- `/webhooks` — Pipedrive `lead.added` webhook handler
+- `/webhooks` — Pipedrive webhook handler (v2 format); creates pending or running agent_run on `lead.create`
 - `/chat` — Lead qualification agent trigger/resume endpoints (/message, /run, /resume, /runs/:leadId, /logs/:runId)
 - `/leads` — Proxy to Pipedrive leads API
 - `/deals` — Deal Coach endpoints (analyze, get analysis, chat)
-- `/settings` — Business profile CRUD (ICP criteria, outreach tone)
+- `/settings` — Webhook management (list, register); business profile CRUD
+- `/company-profile` — Company profile CRUD (name, description, positioning)
+- `/agent-identity` — Per-agent identity CRUD (name, mission, personality, rulebook, config JSONB)
 - `/hub-config` — Global context CRUD (shared across all agents)
 - `/agent-config` — Per-agent local context CRUD
 - `/seed` — Test data generation
 
-**Auth middleware** uses JWT tokens (HS256, 7-day expiry) with a whitelist pattern — only routes `/me`, `/chat`, `/seed`, `/leads`, `/deals`, `/settings`, `/hub-config`, `/agent-config` require auth. `/auth` and `/webhooks` skip it.
+**Auth middleware** uses JWT tokens (HS256, 7-day expiry) with a whitelist pattern — only routes `/me`, `/chat`, `/seed`, `/leads`, `/deals`, `/settings`, `/company-profile`, `/agent-identity`, `/hub-config`, `/agent-config` require auth. `/auth` and `/webhooks` skip it.
 
 **Route behavior notes:**
+- `POST /webhooks/pipedrive` — handles Pipedrive v2 webhook payloads (lead data in `data` field, not `meta`); creates `running` run if `auto_qualify` is on, `pending` run if off; connection lookup falls back to company-only match
 - `POST /chat/message` — skips if an existing run (completed/paused/running) already exists for the lead; returns the existing run info instead
-- `POST /chat/run` — always creates a new run (used for requalification)
+- `POST /chat/run` — always creates a new run (used for manual qualification and requalification)
+- `PUT /agent-identity/:agentId` — merges partial updates with existing row (won't wipe fields not included in request); config is deep-merged
 - `POST /deals/:dealId/analyze` — triggers Deal Coach analysis in background, returns immediately
 - `GET /deals/:dealId/analysis` — returns cached analysis
 - `POST /deals/:dealId/chat` — send coaching question, get AI response
@@ -100,9 +104,9 @@ React 19 + Vite + Tailwind CSS 4. Hub layout with React Router.
 - **Sidebar** — collapsible navigation: Home, agent list (all 6), Build Your Own, Settings
 
 **Pages:**
-- **Home** — agent grid (3 columns) with status badges + recent activity feed
+- **Home** — company profile header (setup prompt when empty, filled card when set), agent grid, simulated agent cards
 - **Agent Workspaces** (`/agent/:agentId`) — per-agent UI loaded from `apps/web/src/agents/`
-  - Lead Qualification: three-panel layout (LeadsList + AgentInspector + ChatPanel) with EmailDraftBar
+  - Lead Qualification: IdentityRail (agent identity + config) + ActivityStream (product/technical toggle) + Verdict panel, with InboxStrip at bottom and EmailDraftBar
   - Deal Coach: three-panel layout (DealList + DealAnalysis + DealChat) with health scores and signal cards
 - **Settings** — tabs for Business Context (global + per-agent config), Pipedrive Connection, Notifications
 - **Build Your Own** — placeholder for custom agent development
@@ -112,7 +116,7 @@ React 19 + Vite + Tailwind CSS 4. Hub layout with React Router.
 - Defines all 6 agents with metadata: id, name, icon, description, status (active/simulated), data scope, default config
 - Workspace components loaded per-agent; simulated agents show placeholder UI
 
-Realtime updates via Supabase channel subscriptions (hooks in `src/hooks/`). API calls go through `lib/api.ts` which attaches JWT token from localStorage.
+Realtime updates via Supabase `postgres_changes` subscriptions (hooks in `src/hooks/`). `useLeads` polls Pipedrive API every 30s as fallback; also refetches when `useAgentRuns` detects a run for an unknown lead ID (triggered by webhook creating a pending/running run). API calls go through `lib/api.ts` which attaches JWT token from localStorage.
 
 ### Shared (`packages/shared`)
 
@@ -131,6 +135,7 @@ Migrations in `supabase/migrations/`:
 - `002_business_profiles.sql` — ICP settings per connection
 - `003_followup_days.sql` — adds followup_days to business_profiles
 - `004_agent_hub.sql` — hub_config, agent_config, deal_analyses, deal_chat_messages; adds agent_id to agent_runs and activity_logs
+- `005_identity_refactor.sql` — agent_identity table (name, mission, personality, rulebook, config JSONB); backfills from business_profiles + agent_config
 
 Supabase Realtime enabled on: `activity_logs`, `agent_runs`, `email_drafts`, `deal_analyses`, `deal_chat_messages`
 
@@ -138,9 +143,14 @@ Supabase Realtime enabled on: `activity_logs`, `agent_runs`, `email_drafts`, `de
 
 - **JWT auth with API path whitelist** — JWT tokens (HS256, 7-day expiry) applied only to known API paths; `/auth` and `/webhooks` skip auth
 - **Agent registry pattern** — agents registered in `registry.ts` with metadata; hub iterates registry for UI and routing
+- **Agent identity system** — `agent_identity` table stores per-agent name, mission, personality, rulebook, and config (JSONB); `LeadQualificationConfig` has `icp_criteria`, `followup_days`, `auto_qualify`
+- **Auto-qualify toggle** — `auto_qualify` config flag (default false) controls whether webhook-triggered leads start qualification automatically or create a pending run for manual trigger
+- **Webhook v2 format** — Pipedrive app-created webhooks use v2 format: lead data in `data` field, no `meta.object`/`meta.action`; connection lookup falls back to company-only match since webhook `user_id` may differ from authenticated user
+- **Partial update merging** — `PUT /agent-identity` merges with existing row using `??` (won't wipe fields not in request); config is deep-merged
 - **Hub-level vs agent-level context** — `hub_config.global_context` shared across all agents; `agent_config.local_context` per agent per connection
 - **Org memory caching** — research results cached 7 days in `org_memory` table to avoid redundant web searches
 - **Conditional graph routing** — Lead Qual skips research if cache fresh, skips outreach if lead scored cold
+- **Pending runs for realtime** — webhook creates `pending` agent_run when auto-qualify is off; frontend subscribes to `agent_runs` via Supabase Realtime and refetches leads when it sees a run for an unknown lead ID
 - **Server uses ES modules** — `"type": "module"` in package.json, imports need `.js` extensions in compiled output
 - **Environment variables** — loaded from root `.env` by server; web uses `VITE_` prefixed vars in `apps/web/.env`
 

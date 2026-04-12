@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { useConnectionContext } from '../../context/ConnectionContext';
 import { useLeads } from '../../hooks/useLeads';
-import { useAgentRuns, useActivityLogs, useEmailDraft } from '../../hooks/useSupabaseRealtime';
+import { useAgentRuns, useActivityLogs, useEmailDraft, useLeadNotifications } from '../../hooks/useSupabaseRealtime';
 import { useAgentIdentity } from '../../hooks/useAgentIdentity';
 import { apiFetch } from '../../lib/api';
 import { IdentityRail } from './components/IdentityRail';
@@ -19,15 +19,8 @@ export function LeadQualificationWorkspace() {
 
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
-  // Refetch leads when a run appears for a lead not in the current list
-  const leadIdSet = useRef(new Set<string>());
-  useEffect(() => {
-    leadIdSet.current = new Set(leads.map((l) => String(l.id)));
-  }, [leads]);
-  useEffect(() => {
-    const hasUnknownLead = runs.some((r) => r.lead_id && !leadIdSet.current.has(r.lead_id));
-    if (hasUnknownLead) refetchLeads();
-  }, [runs, refetchLeads]);
+  // Refetch leads when webhook notifies of a new lead
+  useLeadNotifications(connectionId, refetchLeads);
 
   const selectedRun = runs
     .filter((r) => r.lead_id === selectedLeadId)

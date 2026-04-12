@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useConnection } from '../../hooks/useConnection';
+import { useConnectionContext } from '../../context/ConnectionContext';
 import { useLeads } from '../../hooks/useLeads';
 import { useAgentRuns, useActivityLogs, useEmailDraft } from '../../hooks/useSupabaseRealtime';
 import { useAgentIdentity } from '../../hooks/useAgentIdentity';
@@ -11,7 +11,7 @@ import { EmailDraftBar } from '../../components/EmailDraftBar';
 const AGENT_ID = 'lead-qualification' as const;
 
 export function LeadQualificationWorkspace() {
-  const { connectionId } = useConnection();
+  const { connectionId } = useConnectionContext();
   const { leads, loading: leadsLoading } = useLeads(connectionId);
   const runs = useAgentRuns(connectionId);
   const { identity } = useAgentIdentity(AGENT_ID);
@@ -28,14 +28,6 @@ export function LeadQualificationWorkspace() {
   const agentName = identity?.name || 'Nora';
   const selectedLead = leads.find((l) => String(l.id) === selectedLeadId);
   const leadTitle = selectedLead?.title ?? 'No lead selected';
-
-  if (leadsLoading && leads.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full text-[var(--color-text-secondary)] text-sm">
-        Loading leads...
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full gap-2 p-3">
@@ -74,6 +66,7 @@ export function LeadQualificationWorkspace() {
         runs={runs}
         selectedLeadId={selectedLeadId}
         onSelect={setSelectedLeadId}
+        loading={leadsLoading}
       />
     </div>
   );

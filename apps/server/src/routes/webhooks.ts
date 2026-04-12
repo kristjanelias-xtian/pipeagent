@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import type { PipedriveWebhookPayload } from '../pipedrive/types.js';
 import type { LeadQualificationConfig } from '@pipeagent/shared';
 import { getConnectionByPipedriveUser, getConnectionByCompany } from '../lib/connections.js';
 import { getSupabase } from '../lib/supabase.js';
@@ -8,29 +7,65 @@ import { runQualification } from '../agent/graph.js';
 
 const webhooks = new Hono();
 
+// Pipedrive v2 webhook payload
+interface PipedriveV2Webhook {
+  data: {
+    id: string;
+    creator_id?: number;
+    owner_id?: number;
+    [key: string]: unknown;
+  };
+  previous: Record<string, unknown> | null;
+  meta: {
+    action: string;
+    object: string;
+    id: number | string;
+    company_id: number;
+    user_id: number;
+    [key: string]: unknown;
+  };
+  // v1 fields (may not exist in v2)
+  event?: string;
+  v?: number;
+}
+
 webhooks.post('/pipedrive', async (c) => {
   const raw = await c.req.json();
-  console.log('Webhook raw payload:', JSON.stringify(raw).slice(0, 500));
-  const payload = raw as PipedriveWebhookPayload;
+  console.log('Webhook payload:', JSON.stringify(raw).slice(0, 500));
 
-  // Only handle lead.added events
-  if (payload.meta?.object !== 'lead' || (payload.meta?.action !== 'added' && payload.meta?.action !== 'create')) {
-    console.log(`Webhook ignored: action=${payload.meta?.action} object=${payload.meta?.object} event=${payload.event}`);
-    return c.json({ status: 'ignored', reason: `${payload.meta?.action}.${payload.meta?.object}` });
+  // Support both v1 and v2 payload formats
+  // v2: lead data in `data`, meta may have different fields
+  // v1: meta.object, meta.action, meta.id
+  const payload = raw as PipedriveV2Webhook;
+
+  // Extract lead ID: v2 has data.id, v1 has meta.id
+  const leadId = String(payload.data?.id ?? payload.meta?.id ?? '');
+  if (!leadId) {
+    console.log('Webhook: no lead ID found in payload');
+    return c.json({ status: 'ignored', reason: 'no_lead_id' });
   }
 
-  const leadId = String(payload.meta.id);
-  const { company_id, user_id } = payload.meta;
+  // v1 filter: check meta.object if present (v2 webhooks are pre-filtered by subscription)
+  if (payload.meta?.object && payload.meta.object !== 'lead') {
+    return c.json({ status: 'ignored', reason: `not_lead: ${payload.meta.object}` });
+  }
 
-  console.log(`Webhook lead.added: lead=${leadId} user=${user_id} company=${company_id}`);
+  // Extract user/company IDs from meta or data
+  const userId = payload.meta?.user_id ?? payload.data?.creator_id ?? payload.data?.owner_id;
+  const companyId = payload.meta?.company_id;
 
-  // Find the connection for this user -- try by user first, fall back to company-only
-  let connection = await getConnectionByPipedriveUser(user_id, company_id);
-  if (!connection) {
-    connection = await getConnectionByCompany(company_id);
+  console.log(`Webhook lead: id=${leadId} user=${userId} company=${companyId}`);
+
+  // Find the connection
+  let connection = null;
+  if (userId && companyId) {
+    connection = await getConnectionByPipedriveUser(Number(userId), Number(companyId));
+  }
+  if (!connection && companyId) {
+    connection = await getConnectionByCompany(Number(companyId));
   }
   if (!connection) {
-    console.log(`Webhook: no connection found for user=${user_id} company=${company_id}`);
+    console.log(`Webhook: no connection for user=${userId} company=${companyId}`);
     return c.json({ status: 'ignored', reason: 'no_connection' });
   }
 
@@ -62,7 +97,6 @@ webhooks.post('/pipedrive', async (c) => {
     trigger: 'webhook',
   });
 
-  // Run qualification in background (don't await)
   runQualification({
     connectionId: connection.id,
     leadId,

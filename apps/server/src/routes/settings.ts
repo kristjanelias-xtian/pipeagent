@@ -4,6 +4,18 @@ import type { AppEnv } from '../middleware/auth.js';
 
 const settings = new Hono<AppEnv>();
 
+settings.get('/webhooks', async (c) => {
+  const connectionId = c.get('connectionId');
+  try {
+    const client = await getClientForConnection(connectionId);
+    const result = await (client as any).request('/webhooks');
+    return c.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return c.json({ error: message }, 500);
+  }
+});
+
 settings.post('/register-webhook', async (c) => {
   const connectionId = c.get('connectionId');
   const webhookUrl = process.env.WEBHOOK_URL;

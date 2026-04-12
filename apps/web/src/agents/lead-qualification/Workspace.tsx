@@ -34,7 +34,7 @@ export function LeadQualificationWorkspace() {
   const startQualification = useCallback(async (leadId: string) => {
     setQualifying(true);
     try {
-      await apiFetch('/chat/message', {
+      await apiFetch('/chat/run', {
         method: 'POST',
         body: JSON.stringify({ leadId }),
       });

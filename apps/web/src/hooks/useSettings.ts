@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../lib/api';
-import type { BusinessProfile } from '@pipeagent/shared';
+import type { BusinessProfile } from '../components/SettingsPanel';
 
 export function useSettings(connectionId: string | null) {
   const [settings, setSettings] = useState<BusinessProfile | null>(null);

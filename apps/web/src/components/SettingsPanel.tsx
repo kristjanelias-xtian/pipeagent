@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import type { BusinessProfile, IcpCriterion } from '@pipeagent/shared';
+import type { IcpCriterion } from '@pipeagent/shared';
+
+// Local type for the legacy /settings endpoint (will be replaced when server migrates to company_profile + agent_identity)
+export interface BusinessProfile {
+  business_description: string;
+  value_proposition: string;
+  icp_criteria: IcpCriterion[];
+  outreach_tone: string;
+  followup_days: number;
+}
 
 interface SettingsPanelProps {
   settings: BusinessProfile | null;

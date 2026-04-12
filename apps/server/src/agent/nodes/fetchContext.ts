@@ -1,5 +1,14 @@
 import type { AgentStateType } from '../state.js';
-import type { BusinessProfile, IcpCriterion } from '@pipeagent/shared';
+import type { IcpCriterion } from '@pipeagent/shared';
+
+// Local type for the legacy business_profiles table (will be replaced by company_profile + agent_identity)
+interface BusinessProfile {
+  business_description: string;
+  value_proposition: string;
+  icp_criteria: IcpCriterion[];
+  outreach_tone: string;
+  followup_days: number;
+}
 import { logActivity } from '../logger.js';
 import { getClientForConnection } from '../../lib/connections.js';
 import { getSupabase } from '../../lib/supabase.js';

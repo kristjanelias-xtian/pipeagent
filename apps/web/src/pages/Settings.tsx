@@ -128,7 +128,7 @@ function AgentConfigsPanel() {
                     <textarea
                       className="w-full border border-[#d5d8dc] rounded-md p-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#368764]/25 resize-none bg-white"
                       rows={5}
-                      placeholder={agent.defaultConfig || `Add specific instructions for the ${agent.name} agent...`}
+                      placeholder={`Add specific instructions for the ${agent.name} agent...`}
                       value={getValue(agent.id)}
                       onChange={e => handleChange(agent.id, e.target.value)}
                     />

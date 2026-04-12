@@ -5,11 +5,20 @@ import type {
   ScoringResult,
   LeadLabel,
   EmailDraft,
-  BusinessProfile,
+  IcpCriterion,
   PipedriveLead,
   PipedrivePerson,
   PipedriveOrganization,
 } from '@pipeagent/shared';
+
+// Local type for the legacy business_profiles table (will be replaced by company_profile + agent_identity)
+export interface BusinessProfile {
+  business_description: string;
+  value_proposition: string;
+  icp_criteria: IcpCriterion[];
+  outreach_tone: string;
+  followup_days: number;
+}
 
 export const AgentState = Annotation.Root({
   messages: Annotation<BaseMessage[]>({

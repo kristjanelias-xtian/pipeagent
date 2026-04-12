@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../lib/api';
-import type { AgentConfigRow } from '@pipeagent/shared';
+// Local type for the legacy /agent-config endpoint (will be replaced when server migrates to agent_identity)
+interface AgentConfigRow {
+  agent_id: string;
+  local_context: string;
+}
 
 export function useAgentConfig() {
   const [configs, setConfigs] = useState<Record<string, string>>({});

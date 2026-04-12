@@ -9,7 +9,7 @@ import { ChatPanel } from '../../components/ChatPanel';
 import { EmailDraftBar } from '../../components/EmailDraftBar';
 import { SettingsPanel } from '../../components/SettingsPanel';
 import { apiFetch } from '../../lib/api';
-import type { BusinessProfile } from '@pipeagent/shared';
+import type { BusinessProfile } from '../../components/SettingsPanel';
 
 export function LeadQualificationWorkspace() {
   const { connectionId } = useConnection();

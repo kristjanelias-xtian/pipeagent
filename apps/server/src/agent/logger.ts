@@ -32,13 +32,15 @@ export async function createRun(data: {
   lead_id: string;
   trigger: string;
   agent_id?: string;
+  status?: string;
 }): Promise<string> {
+  const { status = 'running', ...rest } = data;
   const { data: run, error } = await getSupabase()
     .from('agent_runs')
     .insert({
-      ...data,
-      agent_id: data.agent_id || 'lead-qualification',
-      status: 'running',
+      ...rest,
+      agent_id: rest.agent_id || 'lead-qualification',
+      status,
     })
     .select('id')
     .single();

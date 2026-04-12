@@ -42,6 +42,8 @@ export function InboxStrip({
         const run = runByLead.get(String(lead.id));
         const isSelected = String(lead.id) === selectedLeadId;
         const isRunning = run?.status === 'running';
+        const isPending = !run || run.status === 'pending';
+        const displayStatus = run?.status === 'pending' ? 'new' : (run?.status ?? 'idle');
         return (
           <button
             key={lead.id}
@@ -49,13 +51,16 @@ export function InboxStrip({
             className={`min-w-[160px] flex-shrink-0 text-left px-2.5 py-1.5 rounded border text-xs transition ${
               isSelected
                 ? 'border-[var(--color-primary-dark)] bg-[#f0faf5]'
+                : isPending
+                ? 'border-amber-300 bg-amber-50 hover:border-amber-400'
                 : 'border-[var(--color-border-default)] hover:border-[var(--color-primary-bright)]'
             }`}
           >
             <div className="text-[var(--color-text-primary)] font-medium truncate">{lead.title}</div>
             <div className="text-[10px] text-[var(--color-text-tertiary)] flex items-center gap-1 mt-0.5">
               {isRunning && <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />}
-              {run?.status ?? 'idle'}
+              {isPending && <span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full" />}
+              {displayStatus}
               {run?.score !== null && run?.score !== undefined && ` -- ${run.score}`}
             </div>
           </button>

@@ -33,18 +33,17 @@ webhooks.post('/pipedrive', async (c) => {
     .eq('agent_id', 'lead-qualification')
     .maybeSingle();
 
-  // Notify frontend of new lead via Supabase broadcast
-  const channel = getSupabase().channel(`leads-${connection.id}`);
-  channel.subscribe(async (status) => {
-    if (status === 'SUBSCRIBED') {
-      await channel.send({ type: 'broadcast', event: 'lead_added', payload: { lead_id: leadId } });
-      getSupabase().removeChannel(channel);
-    }
-  });
-
   const config = (identity?.config ?? {}) as Partial<LeadQualificationConfig>;
+
   if (!config.auto_qualify) {
-    return c.json({ status: 'ignored', reason: 'auto_qualify_disabled' });
+    // Create a pending run so the frontend knows about the new lead via Realtime
+    await createRun({
+      connection_id: connection.id,
+      lead_id: leadId,
+      trigger: 'webhook',
+      status: 'pending',
+    });
+    return c.json({ status: 'pending', reason: 'auto_qualify_disabled' });
   }
 
   // Create a run and kick off qualification (non-blocking)

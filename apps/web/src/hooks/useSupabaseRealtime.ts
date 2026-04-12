@@ -71,21 +71,6 @@ export function useAgentRuns(connectionId: string | null) {
   return runs;
 }
 
-export function useLeadNotifications(connectionId: string | null, onNewLead: () => void) {
-  useEffect(() => {
-    if (!connectionId) return;
-
-    const channel = supabase
-      .channel(`leads-${connectionId}`)
-      .on('broadcast', { event: 'lead_added' }, () => {
-        onNewLead();
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [connectionId, onNewLead]);
-}
-
 export function useEmailDraft(runId: string | null) {
   const [draft, setDraft] = useState<EmailDraftRow | null>(null);
 

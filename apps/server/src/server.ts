@@ -11,7 +11,6 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { auth } from './routes/auth.js';
 import webhooks from './routes/webhooks.js';
 import chat from './routes/chat.js';
-import seed from './routes/seed.js';
 import leads from './routes/leads.js';
 import deals from './routes/deals.js';
 import settings from './routes/settings.js';
@@ -27,7 +26,7 @@ app.route('/auth', auth);
 app.route('/webhooks', webhooks);
 
 // Auth middleware — only for known API paths
-const API_PREFIXES = ['/me', '/chat', '/seed', '/leads', '/deals', '/settings', '/company-profile', '/agent-identity'];
+const API_PREFIXES = ['/me', '/chat', '/leads', '/deals', '/settings', '/company-profile', '/agent-identity'];
 app.use('*', async (c, next) => {
   const path = c.req.path;
   if (API_PREFIXES.some(prefix => path === prefix || path.startsWith(prefix + '/'))) {
@@ -48,7 +47,6 @@ app.get('/me', async (c) => {
 });
 
 app.route('/chat', chat);
-app.route('/seed', seed);
 app.route('/leads', leads);
 app.route('/deals', deals);
 app.route('/settings', settings);

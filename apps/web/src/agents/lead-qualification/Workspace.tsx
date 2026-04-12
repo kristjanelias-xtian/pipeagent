@@ -2,26 +2,22 @@ import { useState } from 'react';
 import { useConnection } from '../../hooks/useConnection';
 import { useLeads } from '../../hooks/useLeads';
 import { useAgentRuns, useActivityLogs, useEmailDraft } from '../../hooks/useSupabaseRealtime';
-import { useSettings } from '../../hooks/useSettings';
-import { LeadsList } from '../../components/LeadsList';
-import { AgentInspector } from '../../components/AgentInspector';
-import { ChatPanel } from '../../components/ChatPanel';
+import { useAgentIdentity } from '../../hooks/useAgentIdentity';
+import { IdentityRail } from './components/IdentityRail';
+import { ActivityStream } from './components/ActivityStream';
+import { InboxStrip } from './components/InboxStrip';
 import { EmailDraftBar } from '../../components/EmailDraftBar';
-import { SettingsPanel } from '../../components/SettingsPanel';
-import { apiFetch } from '../../lib/api';
-import type { BusinessProfile } from '../../components/SettingsPanel';
+
+const AGENT_ID = 'lead-qualification' as const;
 
 export function LeadQualificationWorkspace() {
   const { connectionId } = useConnection();
-  const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads(connectionId);
+  const { leads, loading: leadsLoading } = useLeads(connectionId);
   const runs = useAgentRuns(connectionId);
-  const { settings, saving, saveSettings } = useSettings(connectionId);
+  const { identity } = useAgentIdentity(AGENT_ID);
 
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
-  // Derive the latest run for the selected lead
   const selectedRun = runs
     .filter((r) => r.lead_id === selectedLeadId)
     .sort((a, b) => (a.created_at > b.created_at ? -1 : 1))[0] ?? null;
@@ -29,97 +25,74 @@ export function LeadQualificationWorkspace() {
   const logs = useActivityLogs(selectedRun?.id ?? null);
   const draft = useEmailDraft(selectedRun?.id ?? null);
 
-  const handleRunAgent = async (leadId: string) => {
-    try {
-      await apiFetch('/chat/run', {
-        method: 'POST',
-        body: JSON.stringify({ leadId }),
-      });
-      setSelectedLeadId(leadId);
-    } catch (err) {
-      console.error('Failed to start agent run:', err);
-    }
-  };
-
-  const handleGenerateLeads = async () => {
-    setGenerating(true);
-    try {
-      await apiFetch('/seed/generate', { method: 'POST' });
-      await refetchLeads();
-    } catch (err) {
-      console.error('Failed to generate leads:', err);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleSaveSettings = async (updated: BusinessProfile) => {
-    await saveSettings(updated);
-    setShowSettings(false);
-  };
+  const agentName = identity?.name || 'Nora';
+  const selectedLead = leads.find((l) => String(l.id) === selectedLeadId);
+  const leadTitle = selectedLead?.title ?? 'No lead selected';
 
   if (leadsLoading && leads.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+      <div className="flex items-center justify-center h-full text-[var(--color-text-secondary)] text-sm">
         Loading leads...
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Settings button row */}
-      <div className="flex items-center justify-end px-4 py-2 border-b border-gray-800">
-        <button
-          onClick={() => setShowSettings(true)}
-          className="text-xs text-gray-400 hover:text-white transition"
-        >
-          Settings
-        </button>
-      </div>
+    <div className="flex flex-col h-full gap-2 p-3">
+      <div className="flex gap-2 flex-1 min-h-0">
+        <IdentityRail />
 
-      {/* Three-panel layout */}
-      <div className="flex flex-1 min-h-0">
-        {/* Left: Leads list */}
-        <div className="w-64 flex-shrink-0 border-r border-gray-800 overflow-hidden">
-          <LeadsList
-            leads={leads}
-            runs={runs}
-            selectedLeadId={selectedLeadId}
-            onSelectLead={setSelectedLeadId}
-            onRunAgent={handleRunAgent}
-            onGenerateLeads={handleGenerateLeads}
-            generating={generating}
-          />
+        <div className="flex flex-col flex-1 min-h-0">
+          {selectedRun ? (
+            <ActivityStream agentName={agentName} leadTitle={leadTitle} logs={logs} />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-[var(--color-text-tertiary)] text-sm bg-[var(--color-card)] border border-[var(--color-border-default)] rounded-lg">
+              Select a lead from the inbox below
+            </div>
+          )}
         </div>
 
-        {/* Center: Agent Inspector */}
-        <div className="flex-1 border-r border-gray-800 overflow-hidden">
-          <AgentInspector logs={logs} />
-        </div>
-
-        {/* Right: Chat */}
-        <div className="w-80 flex-shrink-0 flex flex-col overflow-hidden">
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <ChatPanel leadId={selectedLeadId} logs={logs} />
+        <div className="w-[280px] bg-[var(--color-card)] border border-[var(--color-border-default)] rounded-lg p-3 flex flex-col flex-shrink-0">
+          <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-tertiary)] mb-2">
+            Verdict
           </div>
-
-          {/* Email draft bar appears at bottom of chat panel when pending */}
-          {draft && draft.status === 'pending' && (
-            <EmailDraftBar draft={draft} runId={selectedRun?.id ?? null} />
+          {selectedRun?.score !== null && selectedRun?.score !== undefined ? (
+            <ScoreCard score={selectedRun.score} label={selectedRun.label ?? 'warm'} />
+          ) : (
+            <div className="text-center text-[var(--color-text-tertiary)] text-xs italic py-10">
+              {selectedRun ? `${agentName} is still working...` : 'No run selected'}
+            </div>
+          )}
+          {draft && selectedRun && (
+            <EmailDraftBar runId={selectedRun.id} draft={draft} />
           )}
         </div>
       </div>
 
-      {/* Settings modal */}
-      {showSettings && (
-        <SettingsPanel
-          settings={settings}
-          saving={saving}
-          onSave={handleSaveSettings}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
+      <InboxStrip
+        leads={leads}
+        runs={runs}
+        selectedLeadId={selectedLeadId}
+        onSelect={setSelectedLeadId}
+      />
+    </div>
+  );
+}
+
+function ScoreCard({ score, label }: { score: number; label: string }) {
+  const color =
+    label === 'hot' ? '#dc2626' : label === 'warm' ? '#f59e0b' : '#3b82f6';
+  return (
+    <div className="text-center">
+      <div
+        className="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-2xl font-bold text-white mb-2"
+        style={{ background: color }}
+      >
+        {score}
+      </div>
+      <div className="text-xs uppercase tracking-wide font-semibold" style={{ color }}>
+        {label}
+      </div>
     </div>
   );
 }

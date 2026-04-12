@@ -30,43 +30,47 @@ export function IdentityRail() {
 
   return (
     <>
-      <aside className="w-[300px] bg-[#f0faf5] border border-[var(--color-primary-dark)] rounded-lg p-4 flex flex-col flex-shrink-0">
-        <AgentAvatar name={identity.name || meta.defaultIdentity.name} size={56} className="mx-auto" />
-        <div className="text-center font-bold text-[var(--color-text-primary)] mt-2">
-          {identity.name || meta.defaultIdentity.name}
-        </div>
-        <div className="text-center text-xs text-[var(--color-text-tertiary)] mb-3">
-          {meta.role} -- {profile?.name || 'Your company'}
+      <aside className="w-[300px] bg-[#f0faf5] border border-[var(--color-primary-dark)] rounded-lg flex flex-col flex-shrink-0 min-h-0">
+        <div className="p-4 pb-2 flex-shrink-0">
+          <AgentAvatar name={identity.name || meta.defaultIdentity.name} size={56} className="mx-auto" />
+          <div className="text-center font-bold text-[var(--color-text-primary)] mt-2">
+            {identity.name || meta.defaultIdentity.name}
+          </div>
+          <div className="text-center text-xs text-[var(--color-text-tertiary)] mb-3">
+            {meta.role} -- {profile?.name || 'Your company'}
+          </div>
+
+          <button
+            onClick={() => setShowCompany(true)}
+            className="w-full flex items-center justify-between px-2 py-1.5 bg-indigo-50 border border-indigo-200 rounded text-xs text-[var(--color-text-secondary)] hover:border-indigo-400"
+          >
+            <span>
+              Company: <strong className="text-[var(--color-text-primary)]">{profile?.name || 'Set up'}</strong>
+            </span>
+            <span>&rarr;</span>
+          </button>
         </div>
 
-        <button
-          onClick={() => setShowCompany(true)}
-          className="w-full flex items-center justify-between px-2 py-1.5 mb-3 bg-indigo-50 border border-indigo-200 rounded text-xs text-[var(--color-text-secondary)] hover:border-indigo-400"
-        >
-          <span>
-            Company: <strong className="text-[var(--color-text-primary)]">{profile?.name || 'Set up'}</strong>
-          </span>
-          <span>&rarr;</span>
-        </button>
-
-        {editMode ? (
-          <IdentityEditForm
-            identity={identity}
-            onManageIcp={() => setShowIcp(true)}
-            onSave={async (updates) => {
-              await save(updates);
-              setEditMode(false);
-            }}
-            onCancel={() => setEditMode(false)}
-          />
-        ) : (
-          <IdentityReadOnly
-            identity={identity}
-            criteriaCount={criteria.length}
-            totalWeight={criteria.reduce((s, c) => s + (c.weight || 0), 0)}
-            onEdit={() => setEditMode(true)}
-          />
-        )}
+        <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-4">
+          {editMode ? (
+            <IdentityEditForm
+              identity={identity}
+              onManageIcp={() => setShowIcp(true)}
+              onSave={async (updates) => {
+                await save(updates);
+                setEditMode(false);
+              }}
+              onCancel={() => setEditMode(false)}
+            />
+          ) : (
+            <IdentityReadOnly
+              identity={identity}
+              criteriaCount={criteria.length}
+              totalWeight={criteria.reduce((s, c) => s + (c.weight || 0), 0)}
+              onEdit={() => setEditMode(true)}
+            />
+          )}
+        </div>
       </aside>
 
       {showIcp && (

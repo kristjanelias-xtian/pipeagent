@@ -45,41 +45,60 @@ export function CompanyProfileEditor({ onClose }: { onClose: () => void }) {
         {loading ? (
           <div className="text-[var(--color-text-secondary)]">Loading...</div>
         ) : (
-          <div className="space-y-4">
-            <Field
-              label="Company name"
-              value={form.name}
-              onChange={(v) => setForm({ ...form, name: v })}
-              placeholder="NordLight Solar"
-            />
-            <Field
-              label="Description (one line)"
-              value={form.description}
-              onChange={(v) => setForm({ ...form, description: v })}
-              placeholder="Rooftop solar installations across Estonia"
-              multiline
-            />
-            <Field
-              label="Value proposition"
-              value={form.value_proposition}
-              onChange={(v) => setForm({ ...form, value_proposition: v })}
-              placeholder="What you sell and why it matters"
-              multiline
-            />
-            <Field
-              label="Service area"
-              value={form.service_area}
-              onChange={(v) => setForm({ ...form, service_area: v })}
-              placeholder="Tallinn, Tartu, Parnu"
-            />
-            <Field
-              label="Extra context (free-form)"
-              value={form.extra_context}
-              onChange={(v) => setForm({ ...form, extra_context: v })}
-              placeholder="Anything else every agent should know"
-              multiline
-              large
-            />
+          <div className="space-y-6">
+            <fieldset className="space-y-3 border border-[var(--color-border-subtle)] rounded-lg p-4">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)] px-2">
+                Basics
+              </legend>
+              <Field
+                label="Company name"
+                value={form.name}
+                onChange={(v) => setForm({ ...form, name: v })}
+                placeholder="NordLight Solar"
+              />
+              <Field
+                label="One-line description"
+                value={form.description}
+                onChange={(v) => setForm({ ...form, description: v })}
+                placeholder="Rooftop solar installations across Estonia"
+                hint="What does the company do, in one sentence?"
+              />
+              <Field
+                label="Service area"
+                value={form.service_area}
+                onChange={(v) => setForm({ ...form, service_area: v })}
+                placeholder="Tallinn, Tartu, Parnu"
+              />
+            </fieldset>
+
+            <fieldset className="space-y-3 border border-[var(--color-border-subtle)] rounded-lg p-4">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)] px-2">
+                Positioning
+              </legend>
+              <Field
+                label="Value proposition"
+                value={form.value_proposition}
+                onChange={(v) => setForm({ ...form, value_proposition: v })}
+                placeholder="What you sell and why it matters"
+                hint="Why should prospects pick you over alternatives?"
+                multiline
+              />
+            </fieldset>
+
+            <fieldset className="space-y-3 border border-[var(--color-border-subtle)] rounded-lg p-4">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)] px-2">
+                Additional context
+              </legend>
+              <Field
+                label="Free-form notes"
+                value={form.extra_context}
+                onChange={(v) => setForm({ ...form, extra_context: v })}
+                placeholder="ICP details, tone preferences, competitive notes -- anything every agent should know"
+                hint="This gets included in every agent's system prompt."
+                multiline
+                large
+              />
+            </fieldset>
           </div>
         )}
 
@@ -108,6 +127,7 @@ function Field({
   value,
   onChange,
   placeholder,
+  hint,
   multiline = false,
   large = false,
 }: {
@@ -115,28 +135,33 @@ function Field({
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  hint?: string;
   multiline?: boolean;
   large?: boolean;
 }) {
+  const inputClass = 'w-full px-3 py-2 text-sm rounded border border-[var(--color-border-default)] text-[var(--color-text-primary)] focus:border-[var(--color-primary-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-dark)]/20';
   return (
     <div>
-      <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
+      <label className="block text-xs font-semibold text-[var(--color-text-primary)] mb-1">
         {label}
       </label>
+      {hint && (
+        <p className="text-[11px] text-[var(--color-text-tertiary)] mb-1.5">{hint}</p>
+      )}
       {multiline ? (
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          rows={large ? 5 : 2}
-          className="w-full px-3 py-2 rounded border border-[var(--color-border-default)] text-[var(--color-text-primary)] focus:border-[var(--color-primary-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-dark)]/20"
+          rows={large ? 6 : 3}
+          className={inputClass}
         />
       ) : (
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full px-3 py-2 rounded border border-[var(--color-border-default)] text-[var(--color-text-primary)] focus:border-[var(--color-primary-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-dark)]/20"
+          className={inputClass}
         />
       )}
     </div>

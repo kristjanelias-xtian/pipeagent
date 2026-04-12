@@ -69,6 +69,21 @@ webhooks.post('/pipedrive', async (c) => {
     return c.json({ status: 'ignored', reason: 'no_connection' });
   }
 
+  // Skip if a run already exists for this lead (prevents duplicate notes from duplicate webhooks)
+  const { data: existingRun } = await getSupabase()
+    .from('agent_runs')
+    .select('id, status')
+    .eq('connection_id', connection.id)
+    .eq('lead_id', leadId)
+    .in('status', ['pending', 'running', 'paused', 'completed'])
+    .limit(1)
+    .maybeSingle();
+
+  if (existingRun) {
+    console.log(`Webhook: run already exists for lead ${leadId} (${existingRun.status}), skipping`);
+    return c.json({ status: 'ignored', reason: 'run_exists', run_id: existingRun.id });
+  }
+
   // Check if auto-qualification is enabled
   const { data: identity } = await getSupabase()
     .from('agent_identity')

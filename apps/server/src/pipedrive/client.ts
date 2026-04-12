@@ -97,6 +97,14 @@ export class PipedriveClient {
     });
   }
 
+  async getWebhooks(): Promise<Array<{ id: number; subscription_url: string; event_action: string; event_object: string; [key: string]: unknown }>> {
+    return this.request<Array<{ id: number; subscription_url: string; event_action: string; event_object: string }>>('/webhooks');
+  }
+
+  async deleteWebhook(id: number): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>(`/webhooks/${id}`, { method: 'DELETE' });
+  }
+
   async createWebhook(data: {
     subscription_url: string;
     event_action: string;

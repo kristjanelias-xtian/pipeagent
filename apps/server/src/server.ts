@@ -90,4 +90,39 @@ const port = Number(process.env.PORT) || 3001;
 console.log(`Server starting on port ${port}`);
 serve({ fetch: app.fetch, port });
 
+// One-time cleanup: remove duplicate webhook registrations
+(async () => {
+  try {
+    const webhookUrl = process.env.WEBHOOK_URL;
+    if (!webhookUrl) return;
+
+    const { supabase } = await import('./lib/supabase.js');
+    const { data: connections } = await supabase
+      .from('connections')
+      .select('id')
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    if (!connections?.length) return;
+
+    const { getClientForConnection } = await import('./lib/connections.js');
+    const client = await getClientForConnection(connections[0].id);
+    const targetUrl = `${webhookUrl}/webhooks/pipedrive`;
+    const webhooks = await client.getWebhooks();
+    const matches = webhooks.filter(
+      (w) => w.subscription_url === targetUrl && w.event_action === 'create' && w.event_object === 'lead'
+    );
+
+    if (matches.length > 1) {
+      const dupes = matches.slice(1);
+      for (const dup of dupes) {
+        await client.deleteWebhook(dup.id);
+      }
+      console.log(`Startup: cleaned up ${dupes.length} duplicate webhook(s), kept 1`);
+    }
+  } catch (err) {
+    console.error('Startup webhook cleanup failed:', err);
+  }
+})();
+
 export default app;

@@ -73,15 +73,31 @@ auth.get('/callback', async (c) => {
       scopes: tokens.scope.split(' '),
     });
 
-    // Register webhook for lead.added
+    // Register webhook for lead.added (skip if one already exists)
     if (webhookUrl) {
       try {
-        await pdClient.createWebhook({
-          subscription_url: `${webhookUrl}/webhooks/pipedrive`,
-          event_action: 'create',
-          event_object: 'lead',
-        });
-        console.log(`Webhook registered: ${webhookUrl}/webhooks/pipedrive`);
+        const targetUrl = `${webhookUrl}/webhooks/pipedrive`;
+        const existing = await pdClient.getWebhooks();
+        const matches = existing.filter(
+          (w) => w.subscription_url === targetUrl && w.event_action === 'create' && w.event_object === 'lead'
+        );
+
+        if (matches.length === 0) {
+          await pdClient.createWebhook({
+            subscription_url: targetUrl,
+            event_action: 'create',
+            event_object: 'lead',
+          });
+          console.log(`Webhook registered: ${targetUrl}`);
+        } else {
+          // Clean up duplicates: keep the first, delete the rest
+          for (const dup of matches.slice(1)) {
+            await pdClient.deleteWebhook(dup.id);
+          }
+          if (matches.length > 1) {
+            console.log(`Cleaned up ${matches.length - 1} duplicate webhook(s)`);
+          }
+        }
       } catch (webhookErr) {
         console.error('Webhook registration failed:', webhookErr);
       }

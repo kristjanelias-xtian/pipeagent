@@ -42,12 +42,19 @@ export function IdentityRail() {
 
           <button
             onClick={() => setShowCompany(true)}
-            className="w-full flex items-center justify-between px-2 py-1.5 bg-indigo-50 border border-indigo-200 rounded text-xs text-[var(--color-text-secondary)] hover:border-indigo-400"
+            className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-xs hover:border-[var(--color-primary-dark)] ${
+              profile?.name
+                ? 'bg-white/60 border border-[var(--color-primary-dark)]/20 text-[var(--color-text-secondary)]'
+                : 'border border-dashed border-[var(--color-primary-dark)]/30 text-[var(--color-text-tertiary)]'
+            }`}
           >
             <span>
-              Company: <strong className="text-[var(--color-text-primary)]">{profile?.name || 'Set up'}</strong>
+              {profile?.name
+                ? <><span>Company: </span><strong className="text-[var(--color-text-primary)]">{profile.name}</strong></>
+                : 'Set up company profile'
+              }
             </span>
-            <span>&rarr;</span>
+            <span className="text-[var(--color-primary-dark)]">&rarr;</span>
           </button>
         </div>
 

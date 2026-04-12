@@ -5,6 +5,8 @@ import type {
   PipedriveNote,
   PipedrivePerson,
   PipedriveOrganization,
+  CompanyProfile,
+  AgentIdentityRow,
   DealSignal,
   DealAction,
 } from '@pipeagent/shared';
@@ -22,8 +24,8 @@ export const DealCoachState = Annotation.Root({
   signals: Annotation<DealSignal[]>({ reducer: (_, v) => v, default: () => [] }),
   healthScore: Annotation<number>({ reducer: (_, v) => v, default: () => 0 }),
   actions: Annotation<DealAction[]>({ reducer: (_, v) => v, default: () => [] }),
-  globalContext: Annotation<string>({ reducer: (_, v) => v, default: () => '' }),
-  localContext: Annotation<string>({ reducer: (_, v) => v, default: () => '' }),
+  companyProfile: Annotation<CompanyProfile | null>({ reducer: (_, v) => v, default: () => null }),
+  identity: Annotation<AgentIdentityRow | null>({ reducer: (_, v) => v, default: () => null }),
 });
 
 export type DealCoachStateType = typeof DealCoachState.State;

@@ -3,7 +3,7 @@ import { logActivity as log, updateRunStatus } from '../logger.js';
 import { getClientForConnection } from '../../lib/connections.js';
 
 export async function logActivityNode(state: AgentStateType): Promise<Partial<AgentStateType>> {
-  const { runId, connectionId, leadId, person, organization, scoring, label, emailDraft, editedEmail, hitlAction, settings } = state;
+  const { runId, connectionId, leadId, person, organization, scoring, label, emailDraft, editedEmail, hitlAction, identity } = state;
 
   await log(runId, 'complete', 'node_enter', {
     score: scoring?.overall_score,
@@ -34,7 +34,8 @@ export async function logActivityNode(state: AgentStateType): Promise<Partial<Ag
         });
 
         // Activity 2: Scheduled follow-up
-        const followupDays = settings?.followup_days ?? 3;
+        const followupDays =
+          (identity?.config as { followup_days?: number } | undefined)?.followup_days ?? 3;
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + followupDays);
         const dueDateStr = dueDate.toISOString().split('T')[0];

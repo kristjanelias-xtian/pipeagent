@@ -77,14 +77,6 @@ export interface IcpCriterion {
   weight: number;
 }
 
-export interface BusinessProfile {
-  business_description: string;
-  value_proposition: string;
-  icp_criteria: IcpCriterion[];
-  outreach_tone: string;
-  followup_days: number;
-}
-
 // --- Agent Hub types ---
 
 export type AgentId =
@@ -100,12 +92,25 @@ export type AgentStatus = 'active' | 'simulated' | 'coming-soon';
 export interface AgentMeta {
   id: AgentId;
   name: string;
-  icon: string;
+  role: string;
+  icon: LucideIconName;
   description: string;
   status: AgentStatus;
   dataScope: 'leads' | 'deals' | 'contacts' | 'pipeline';
-  defaultConfig: string;
+  scopeIn: string;
+  scopeOut: string;
+  defaultIdentity: {
+    name: string;
+    mission: string;
+    personality: string;
+  };
+  defaultConfig: Record<string, unknown>;
 }
+
+// LucideIconName is defined in the frontend (AgentIcon.tsx) as a union of
+// whitelisted icon keys. The shared package uses a string to avoid pulling in
+// React/Lucide as a dependency -- the frontend casts at the boundary.
+export type LucideIconName = string;
 
 // --- Database rows ---
 
@@ -178,20 +183,40 @@ export interface DealAnalysis {
   actions: DealAction[];
 }
 
-// Database row types for new tables
-export interface HubConfigRow {
+// Company profile: one row per connection, shared across all agents
+export interface CompanyProfile {
   id: string;
   connection_id: string;
-  global_context: string;
+  name: string;
+  description: string;
+  value_proposition: string;
+  service_area: string;
+  extra_context: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface AgentConfigRow {
+// Structured config for lead-qualification agent_identity.config JSONB
+export interface LeadQualificationConfig {
+  icp_criteria: IcpCriterion[];
+  followup_days: number;
+}
+
+// Structured config for deal-coach agent_identity.config JSONB
+export interface DealCoachConfig {
+  health_score_weights?: Record<string, number>;
+}
+
+// agent_identity table row
+export interface AgentIdentityRow {
   id: string;
   connection_id: string;
   agent_id: AgentId;
-  local_context: string;
+  name: string;
+  mission: string;
+  personality: string;
+  rulebook: string;
+  config: LeadQualificationConfig | DealCoachConfig | Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }

@@ -86,7 +86,7 @@ style: |
 
 **What happens when you give an LLM access to your CRM and tell it to do sales work?**
 
-Two sub-questions drove five months of experiments:
+Two sub-questions drove a few weekends of intense building:
 
 1. How much should **the framework** decide?
 2. How much should **the model** decide?

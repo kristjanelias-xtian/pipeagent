@@ -2,7 +2,7 @@
 
 ## Presenter
 
-Kristjan Elias, Engineering Director at Pipedrive. This presentation covers five months of personal experiments building AI agents on top of Pipedrive CRM, exploring two fundamentally different approaches to agent architecture.
+Kristjan Elias, Engineering Director at Pipedrive. This presentation covers a series of weekend experiments building AI agents on top of Pipedrive CRM, exploring two fundamentally different approaches to agent architecture. The timeline: home-ai (Alfred) started on a ski trip to Italy, pipeagent was built over one weekend, digital-pd-team over another weekend, then some polishing on pipeagent over a third weekend. A few intense iterations, not months of sustained effort -- which is part of the point.
 
 ## Presentation Purpose
 
@@ -14,7 +14,7 @@ An engineering TEX (Tech Excellence) session at Pipedrive. Audience is software 
 
 ## What happens when you give an LLM access to your CRM and tell it to do sales work?
 
-This is the question that drove five months of experiments. Not "can we add AI to Pipedrive?" but something more specific: when it's time to decide what happens next, who decides -- the framework or the model?
+This is the question that drove a few weekends of intense building. Not "can we add AI to Pipedrive?" but something more specific: when it's time to decide what happens next, who decides -- the framework or the model?
 
 That single question -- where does decision-making authority live? -- determines the entire shape of the system you build. It determines how you store state, how you deploy changes, how you handle failures, how much things cost, and what surprises you.
 
